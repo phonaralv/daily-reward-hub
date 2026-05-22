@@ -22,8 +22,5 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}): number
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [seed, reduced],
   );
-  // Deterministic per-instance jitter slot keeps multiple counters out of
-  // the same 400ms lockstep bucket on first delta.
-  const jitterKey = `live-counter:${opts.category ?? "activity"}:${seed}`;
-  return useSource(source, { jitterKey });
+  return useSource(source);
 }

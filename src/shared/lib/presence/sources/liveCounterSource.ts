@@ -1,4 +1,8 @@
-import { getTimeMultiplier } from "../waveEngine";
+import {
+  getTimeMultiplier,
+  PRESENCE_FIRST_LIVE_DELAY_MS,
+  PRESENCE_QUIET_WINDOW_MS,
+} from "../waveEngine";
 import type { UpdateIntensity } from "../types";
 import type { PresenceSource } from "./types";
 
@@ -104,11 +108,15 @@ export function liveCounterSource(
     firstPaint: () => seed,
     sample: (now, prev) => {
       if (mountedAt === null) {
-        // useSource has already enforced the quiet window. Fire the first
-        // delta immediately, then schedule subsequent waves naturally.
+        // useSource has already waited PRESENCE_FIRST_LIVE_DELAY_MS. We add
+        // the remaining (QUIET_WINDOW - FIRST_LIVE) ms before the first
+        // delta so high-frequency counters never collide with slotted
+        // sources in the same 400ms lockstep bucket. The per-instance
+        // `offset` (137-prime stride) staggers concurrent counters.
         mountedAt = now;
-        nextTickAt = now;
-        nextWaveAt = planNextWave(now);
+        const earliestDelta = now + (PRESENCE_QUIET_WINDOW_MS - PRESENCE_FIRST_LIVE_DELAY_MS);
+        nextTickAt = Math.max(earliestDelta, planNextTick(now));
+        nextWaveAt = Math.max(earliestDelta, planNextWave(now));
       }
 
       // Ease step
