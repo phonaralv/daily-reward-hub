@@ -1,26 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "@/shared/ui/AppShell";
+import { LiveOnboardingCounter } from "@/shared/ui/presence/LiveOnboardingCounter";
+import { ActiveCountriesIndicator } from "@/shared/ui/presence/ActiveCountriesIndicator";
+import { RewardWaveBanner } from "@/shared/ui/presence/RewardWaveBanner";
+import { TrendingMissionPulse } from "@/shared/ui/presence/TrendingMissionPulse";
+import { RegionHeatBadge } from "@/shared/ui/presence/RegionHeatBadge";
+import { WorldActivityMapPlaceholder } from "@/shared/ui/presence/WorldActivityMapPlaceholder";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Phonara — 무료로 시작하는 부수입 플랫폼" },
+      { name: "description", content: "0초 진입, 3초 첫 보상, 12초 첫 공유. 무료 부수입 플랫폼." },
+    ],
+  }),
+  component: Home,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function Home() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
+    <AppShell title="Phonara">
+      <div className="px-4 py-4 space-y-4">
+        <section className="flex items-center justify-between">
+          <LiveOnboardingCounter />
+          <RegionHeatBadge />
+        </section>
 
-function Index() {
-  return <PlaceholderIndex />;
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            지금 글로벌 활동
+          </h2>
+          <WorldActivityMapPlaceholder />
+          <ActiveCountriesIndicator />
+        </section>
+
+        <RewardWaveBanner />
+
+        <TrendingMissionPulse />
+
+        <section className="rounded-2xl border border-border bg-surface-1 p-4">
+          <p className="text-xs text-muted-foreground">PR-2 구현 예정 — 출석/미션 위젯, 첫 보상 플로우.</p>
+        </section>
+      </div>
+    </AppShell>
+  );
 }
