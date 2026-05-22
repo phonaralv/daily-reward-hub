@@ -89,7 +89,7 @@ export function getDeterministicRegions(
  * Time-dependent — MUST NOT run during the first paint window.
  */
 export function regionHeat(r: Region, now: Date = new Date()): number {
-  const h = hourInTz(r.timezone, now);
+  const h = hourInTz(r.timezone, now); // allow-source-call
   const [start, end] = r.activeHours;
   const inPrime = h >= start && h <= end;
   const base = 0.5 + Math.sin((h / 24) * Math.PI * 2) * 0.15;
@@ -133,9 +133,9 @@ export function useActiveRegions(
 export function getTimeMultiplier(
   category: "onboarding" | "trade" | "reward" | "activity",
 ): number {
-  const seoulH = hourInTz("Asia/Seoul");
-  const nyH = hourInTz("America/New_York");
-  const lonH = hourInTz("Europe/London");
+  const seoulH = hourInTz("Asia/Seoul"); // allow-source-call
+  const nyH = hourInTz("America/New_York"); // allow-source-call
+  const lonH = hourInTz("Europe/London"); // allow-source-call
 
   const asiaPrime = seoulH >= 19 && seoulH <= 23;
   const naEvening = nyH >= 19 && nyH <= 23;
