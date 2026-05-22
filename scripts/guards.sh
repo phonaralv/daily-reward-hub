@@ -30,12 +30,16 @@ check "no client import of client.server.ts" \
    | grep -v '\\.functions\\.ts'"
 
 # 2. No hard-coded hex colors in component/style code (use design tokens).
-#    Allow: src/styles.css, manifest, any .server.ts.
+#    Allowed paths: design system source, SSR error page (no Tailwind there),
+#    chart shadcn primitive (recharts CSS selectors), PWA theme-color meta tag.
 check "no hardcoded hex colors in src" \
   "grep -RIn --include='*.ts' --include='*.tsx' \
      --exclude-dir=node_modules \
      -E '#[0-9a-fA-F]{3,8}\\b' src \
    | grep -v 'src/styles.css' \
+   | grep -v 'src/lib/error-page.ts' \
+   | grep -v 'src/components/ui/chart.tsx' \
+   | grep -v 'theme-color' \
    | grep -v '\\.server\\.ts' \
    | grep -v '// allow-hex'"
 
