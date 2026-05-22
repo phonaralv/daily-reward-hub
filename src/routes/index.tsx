@@ -6,6 +6,7 @@ import { RewardWaveBanner } from "@/shared/ui/presence/RewardWaveBanner";
 import { TrendingMissionPulse } from "@/shared/ui/presence/TrendingMissionPulse";
 import { RegionHeatBadge } from "@/shared/ui/presence/RegionHeatBadge";
 import { WorldActivityMapPlaceholder } from "@/shared/ui/presence/WorldActivityMapPlaceholder";
+import { LiveTicker } from "@/shared/ui/presence/primitives/LiveTicker";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,6 +36,8 @@ function Home() {
         </section>
 
         <RewardWaveBanner />
+
+        <LiveTicker size={5} className="px-1" />
 
         <TrendingMissionPulse />
 
