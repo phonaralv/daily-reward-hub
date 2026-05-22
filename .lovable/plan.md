@@ -1,256 +1,108 @@
-# PR-1 Polish — PHONARA Foundation Reset
+# PR-1 Polish — Step 0 only: Presence Aliveness Baseline
 
-이전 PR-1 Polish 플랜은 폐기한다. 새 기준은 “안전한 기반”이 아니라
-**Presence-first, low-end-real, PR-2-safe Foundation**이다.
+이전 플랜들은 모두 폐기. 이번 응답은 **0단계만** 다룬다.
+0단계가 사용자와 합의되어 끝나야 1단계 플랜이 나온다.
+4단계를 한 번에 보여주는 행위 자체가 PR-1 원칙 위반이므로 반복하지 않는다.
 
-PR-1의 성공 기준은 기능 수가 아니다.
-첫 진입자가 PHONARA를 “이미 전 세계에서 살아 움직이는 플랫폼”으로 느끼고,
-2026년 저가 안드로이드에서도 그 느낌이 끊기지 않으며,
-PR-2에서 트레이딩/지갑/슬롯을 얹어도 무너지지 않는 구조를 만드는 것이다.
+## 0단계의 본질
 
-진행 규칙:
-- 한 단계만 진행한다.
-- 단계 완료 후 변경 파일, 마지막 커밋 SHA, guards/lint, 검증 결과를 보고한다.
-- 사용자 승인 전 다음 단계로 넘어가지 않는다.
-- PR-1에서 비즈니스 mutation은 절대 추가하지 않는다.
+PR-1의 정체성은 “Presence가 살아있다”이다.
+그런데 지금 preview에서 SSR/CSR이 서로 다른 region(예: 서버 Berlin, 클라이언트 London)을
+렌더한다. 첫 인상에서 “살아있음”이 아닌 “불안정함”이 먼저 전달된다.
+이 상태로 1~4단계를 쌓는 것은 무너진 기초 위에 짓는 행위다.
 
----
+따라서 0단계는 단순한 버그 픽스가 아니라:
 
-## 0단계 — 현재 Presence 신뢰성 결함 즉시 고정
+1. PHONARA의 “살아있음”이 무엇인지 **운영 가능한 정의**로 박는다.
+2. 그 정의를 **측정 가능한 baseline**으로 만든다.
+3. 첫 진입 순간에 그 정의가 깨지지 않도록 **하드웨어/네트워크 조건별로 검증**한다.
 
-현재 preview에 SSR hydration mismatch가 있다.
-예: 서버는 Berlin, 클라이언트는 London을 렌더링한다.
-이 상태에서는 “살아있음”이 아니라 “불안정함”을 느끼게 하므로 PR-1 첫 작업으로 처리한다.
+## 0-A. Aliveness Spec (감성을 운영 정의로)
 
-목표:
-- SSR/CSR 첫 렌더가 같은 region/pulse/ticker 상태를 렌더링한다.
-- `Math.random()`, `Date.now()`, locale/timezone 차이로 첫 화면 텍스트가 바뀌지 않게 한다.
-- mounted 이후에만 live variation이 시작된다.
+`docs/presence/ALIVENESS.md` 신설. PR 전체의 북극성.
 
-산출물:
-- hydration mismatch 제거 확인
-- 변경 파일 목록, SHA, guards/lint 결과
-- 승인 후 1단계 진행
+다음 4가지를 1페이지로 명시한다.
 
----
+- **First Impression Invariant**
+  첫 화면 페인트 후 1초 이내에 사용자가 보는 모든 presence 문자열은 SSR과 동일해야 한다.
+  region 이름, ticker 문구, 카운터 정수부, pulse 라벨 전부.
+  → 위반 시 “살아있음”이 아니라 “깜빡임”으로 인식된다.
 
-## 1단계 — Presence Experience System
+- **Movement Within 5 Seconds**
+  마운트 후 5초 안에 화면에 보이는 presence 요소 중 **최소 1개**가 의미 있는 변화를 보인다.
+  (counter delta ≥ floor 변화 또는 pulse 단계 변화)
+  → 5초 동안 정지하면 “정적 페이지”로 인식된다.
 
-Presence를 개별 컴포넌트 묶음이 아니라 하나의 경험 시스템으로 만든다.
-가드는 마지막 방어선이고, 핵심은 **신뢰 가능한 aggregate 서사 + 안정적인 변화 리듬 + 일관된 SSR 초기 상태**다.
+- **No Lockstep**
+  같은 뷰포트에 있는 presence 요소 중 동일 400ms 윈도우 안에서 동시에 갱신되는 요소는 1개를 넘지 않는다.
+  → 동시 갱신은 “자동 새로고침”의 인공적 느낌을 만든다.
 
-### 1-A. Presence Manifest
+- **Truth Boundary**
+  presence 텍스트에는 개인 식별/개인 수익/출금 문구가 절대 등장하지 않는다.
+  aggregate(인원, 국가 수, region heat, global pulse)만 허용.
 
-`src/shared/lib/presence/manifest.ts`를 만든다.
-모든 presence 표시는 manifest에 등록된 항목만 사용한다.
+이 4가지가 PR-1 내내 인용되는 단일 출처가 된다.
+이후 모든 단계의 “완료”는 이 4가지 invariant로만 판정한다.
 
-각 항목은 다음을 가진다:
-- 목적: online count, active countries, region heat, global pulse, ticker
-- 표시 문구 범위: 개인 이름/개인 수익/출금 금지
-- floor/ceiling: 숫자의 현실성 경계
-- tick delta/wave delta: 변화 폭의 경계
-- canDecrease: 단조 증가 금지 여부
-- firstPaintValue: SSR/CSR 동일 초기값
-- emotionalRole: “활발함”, “글로벌감”, “안정감” 중 무엇을 전달하는지
+## 0-B. Hydration & First Paint 수정
 
-효과:
-- Presence가 “랜덤 숫자”가 아니라 제품 언어와 신뢰 경계를 가진 시스템이 된다.
-- PR-2에서 실제 aggregate 이벤트가 들어와도 같은 manifest로 흡수 가능하다.
+원인 후보:
+- `WorldwideTicker`, `RegionHeatBadge`가 `Math.random()` / `Date.now()` / `getTimeMultiplier()` 결과를
+  SSR과 CSR에서 다르게 평가한다.
+- `useActiveRegions` 류가 모듈 로드 시점에 한 번만 셔플하는데, 서버/클라이언트가 같은 모듈 인스턴스를
+  공유하지 않으므로 결과가 달라진다.
 
-### 1-B. Deterministic First Paint
+수정 원칙(코드 작업은 build 모드에서):
+- 첫 렌더 값은 **요청 단위 seed**(예: route loader가 만든 안정 값)로부터 deterministic 도출.
+- 시간/locale/random 입력은 **mount 이후**에만 사용. `useEffect` 안에서만 live 모드 진입.
+- region/ticker 선택은 `seed → hash → index` 순수 함수로 분리.
 
-첫 렌더는 seed 기반 deterministic 값만 사용한다.
-mounted 이후 live engine이 움직인다.
+수정 후 확인:
+- preview에서 hydration 경고 0건.
+- view-source의 첫 paint 문자열이 마운트 직후 첫 frame과 동일.
 
-- region 선택, ticker 문구, 초기 counter jitter는 seed hash로 결정
-- 브라우저 시간/랜덤/locale 차이가 SSR 텍스트에 직접 들어가지 않게 차단
-- `useEffect` 이후에만 시간대 bias와 wave를 적용
+## 0-C. Baseline 측정 (정적 분석이 아니라 실측)
 
-### 1-C. Presence Rhythm
+`scripts/presence-baseline.mjs` 신설. Puppeteer/Playwright 없이도 가능한 최소 측정:
 
-사용자는 “숫자가 움직인다”가 아니라 “세계가 움직인다”를 느껴야 한다.
+- preview URL을 headless로 열고, `performance.getEntriesByType("longtask")`,
+  `PerformanceObserver("event")`(INP 근사), `requestAnimationFrame` 호출 수,
+  `setTimeout` 호출 수를 30초간 수집.
+- 동일 측정을 3가지 프로파일로 반복:
+  1. desktop default
+  2. CPU 4x throttle + Slow 3G (저가 안드로이드 근사)
+  3. CPU 6x throttle + offline-after-load (체감 한계)
+- 결과를 `docs/presence/BASELINE.json`에 저장. 0단계 종료 보고에 그대로 첨부.
 
-- 모든 카운터가 같은 순간 움직이지 않도록 stagger를 manifest 기반으로 고정
-- region heat, countries, online count가 서로 모순되지 않게 변화 폭을 제한
-- hidden tab 복귀 시 누적 변화 반영 금지: 다음 tick부터 자연 재개
-- reduced-motion에서는 움직임을 없애되 정보는 유지
+이 baseline은 1단계 이후 Runtime Budget의 “before/after” 비교 기준이 된다.
+숫자가 임의적이라는 비판을 피하기 위해, 예산은 baseline 측정 후에만 확정한다.
 
-### 1-D. Truth Guard
+## 0-D. Aliveness 자동 체크 (실측 기반)
 
-`scripts/guards.sh`에 presence 전용 가드를 추가한다.
+`scripts/aliveness-check.mjs` 신설. CI에서 PR마다 돌릴 수 있게 한다.
 
-차단 범위:
-- `src/shared/ui/presence/**`
-- `src/shared/lib/presence/**`
+검증 항목 — 0-A의 4 invariant를 직접 측정:
+- **First Impression Invariant**: SSR HTML 스냅샷의 presence 문자열 vs 마운트 후 1초 시점 DOM 비교. 다르면 fail.
+- **Movement Within 5 Seconds**: 5초간 DOM mutation 관찰. presence 영역에 의미 있는 텍스트 변화 0건이면 fail.
+- **No Lockstep**: mutation 타임라인을 400ms 버킷으로 묶어 동시 갱신 수가 2 이상인 버킷이 있으면 fail.
+- **Truth Boundary**: presence 영역 텍스트에 금지 패턴 매칭되면 fail (정규식은 0-A에 명시).
 
-차단 패턴:
-- 사용자명/개인 식별: `username`, `userName`, `avatar`, `testimonial`
-- 개인 수익/출금: `withdrew`, `withdrawal`, `earned $`, `profit $`, `KRW 123`, `USD 123`
-- 직접 데이터 조작: `localStorage`, `sessionStorage`, `fetch(`, `XMLHttpRequest`, `new WebSocket(`
-- manifest 밖에서 임의 presence 숫자 생성
+이로써 “Presence가 살아있다”가 코드로 검증 가능해진다.
+1단계부터는 이 스크립트가 회귀 방지선 역할을 한다.
 
-위반 시 `src/shared/lib/presence/RULES.md` 경로를 함께 출력한다.
+## 0단계 종료 조건 (이게 통과해야 1단계 플랜을 낸다)
 
-### 1-E. Presence Rules 문서
+- hydration 경고 0
+- `aliveness-check` 4 invariant 모두 pass
+- `presence-baseline.json` 3개 프로파일 측정값 첨부
+- 변경 파일 목록 + 마지막 커밋 SHA
+- 사용자가 “0단계 OK, 1단계 플랜 만들어라”라고 명시 승인
 
-`RULES.md`를 단순 금지 목록에서 “Presence Philosophy + Contract” 문서로 바꾼다.
-
-포함 내용:
-- Presence는 통계적 진실만 보여준다.
-- 살아있음은 가짜 개인이 아니라 전 지구적 흐름에서 나온다.
-- 숫자 변화는 현실성 경계 안에서만 움직인다.
-- kill switch가 있으면 즉시 정지 가능해야 한다.
-
-검증:
-- hydration mismatch 없음
-- hidden tab 복귀 시 점프 없음
-- reduced-motion에서 snap
-- guards/lint green
-- 승인 후 2단계 진행
-
----
-
-## 2단계 — Low-end Runtime Budget
-
-저사양 대응은 deviceTier 이름표가 아니다.
-목표는 presence가 사용하는 **타이머 수, RAF 수, 동시 업데이트 수, 메인 스레드 작업량**을 줄이는 것이다.
-
-### 2-A. Device Tier
-
-`src/shared/lib/perf/deviceTier.ts` 신설:
-- SSR 기본값: mid
-- low 조건: deviceMemory <= 2, hardwareConcurrency <= 4, slow-2g/2g/3g,
-  saveData, prefers-reduced-data
-- high 조건: 충분한 memory/cores + 빠른 네트워크
-- `getDeviceTier()`, `useDeviceTier()` 제공
-
-### 2-B. Presence Runtime Budget
-
-presence runtime에 tier별 예산을 둔다.
-
-```text
-low  : RAF 0 or 1, tick >= 400ms, active live counters <= 4, wave scale 0.6
-mid  : RAF 1,      tick >= 250ms, active live counters <= 8, wave scale 1.0
-high : RAF 1,      tick >= 200ms, active live counters <= 12, wave scale 1.0
-```
-
-적용 방식:
-- low tier에서는 easing보다 snap을 우선한다.
-- 화면 밖/비가시 presence는 업데이트하지 않는다.
-- 동시에 많은 presence 요소가 있으면 우선순위를 둔다:
-  1. global pulse
-  2. main online counter
-  3. region heat
-  4. secondary ticker
-
-### 2-C. Observability
-
-dev에서만 `window.__phonaraPresence`를 노출한다.
-
-확인 가능한 값:
-- active subscribers
-- ticks per minute
-- animation frames per minute
-- current tier
-- hidden/reduced-motion/saveData 상태
-
-검증:
-- CPU throttle + Slow 3G에서 subscriber/tick/RAF 수 보고
-- 카운터가 끊기거나 폭주하지 않는지 preview 확인
-- guards/lint green
-- 승인 후 3단계 진행
-
----
-
-## 3단계 — PR-2 방어 아키텍처
-
-PR-2에서 트레이딩, 지갑, 슬롯이 들어오면 복잡도는 급증한다.
-PR-1에서 다음 경계를 코드와 문서로 고정한다.
-
-### 3-A. Dependency Direction
-
-가드/ESLint로 확인:
-- `src/shared/**`는 `src/features/**`, `src/routes/**`를 import하지 않는다.
-- `src/shared/lib/presence/**`는 presence/perf/config/notify/useRealtimeChannel 외 도메인 import 금지.
-- `client.server.ts`는 서버 전용. 클라이언트 import 금지.
-- `sonner`는 `@/shared/lib/notify`만 사용.
-- `src/pages/` 금지.
-
-### 3-B. Business Mutation Fence
-
-PR-1에서 다음을 금지한다:
-- wallet/trade/slot/mission mutation
-- fake balance, fake reward, fake trade event
-- client-side admin/role 판단
-- localStorage 기반 권한/경제 상태
-
-### 3-C. PR-1 Rules 문서
-
-`docs/PR1_RULES.md` 1페이지 작성:
-- Foundation의 목적
-- Presence contract/manifest 원칙
-- Low-end runtime budget 원칙
-- 데이터/권한/서버 경계
-- PR-2 전까지 금지되는 작업
-
-검증:
-- guards/lint green
-- 의도적 위반 sanity check 후 원복
-- 승인 후 4단계 진행
-
----
-
-## 4단계 — README 정확화
-
-README는 마지막에 실제 코드와 맞춘다.
-
-수정 내용:
-- Vision 한 단락
-- PR-1 범위와 비범위
-- 실제 DB migration 순서
-
-```text
-01_extensions.sql        pgcrypto, citext
-02_roles_helpers.sql     app_role enum + user_roles + has_role()
-                         SECURITY DEFINER + SET search_path = public
-03_profiles.sql          profiles + handle uniqueness
-04_wallets_ledger.sql    wallet + ledger schema only
-05_onboarding.sql        onboarding / activation tracking
-06_kill_switches.sql     feature_flags + presence_* keys
-07_notifications.sql     notifications + notification_prefs + Realtime
-```
-
-명시:
-- 모든 테이블 RLS ON
-- 정책은 `auth.uid()` + `has_role()` 기반
-- 중요한 함수는 SECURITY DEFINER + `SET search_path = public`
-- PR-2 진입 조건: 0~4단계 green + 사용자 합의
-
-검증:
-- README와 실제 코드/마이그레이션 설명 일치
-- guards/lint green
-- PR-1 종료 여부 사용자 확인
-
----
-
-## 이번 PR에서 하지 않는 것
-
-- 상세 Performance Budget 수치 문서화
-- Workbox/PWA runtime caching
-- raster image import guard
-- content-visibility / contain CSS
-- 트레이딩/지갑/미션/슬롯/referral business logic
-- fake 개인 이벤트
-- Sentry/analytics 연결
-- 대규모 디자인 리뉴얼
-
----
-
-## PR-1 종료 조건
-
-- hydration mismatch 없음
-- Presence manifest 기반, aggregate-only, deterministic first paint
-- 저사양 모드에서 runtime budget이 실제로 낮아짐
-- guards/lint green
-- README가 실제 상태와 일치
-- 사용자와 “PR-1 종료 가능” 합의
+## 이번 응답에서 의도적으로 하지 않는 것
+
+- 1, 2, 3, 4단계 사전 노출 (한 단계만 깊게 합의한다)
+- manifest / clock / contract 같은 시스템 설계 미리 확정
+- deviceTier 정의
+- README 수정
+- 가드 추가 (1단계에서 다룬다)
+- 임의 예산 숫자 (baseline 측정 후에만 정한다)
