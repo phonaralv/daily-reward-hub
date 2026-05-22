@@ -195,7 +195,7 @@ src/features/.gitkeep
 - **03_profiles** — `profiles`(referral_code nanoid8, tier, device_fingerprint, locale, timezone) + `on_auth_user_created` trigger
 - **04_wallets_ledger** — `wallets`, append-only `ledger`, `_apply_ledger()`
 - **05_onboarding** — `onboarding_progress` + `complete_onboarding_step()`(welcome 15,000 PHON 멱등), `app_install` step 예약
-- **06_kill_switches** — 11키 seed + `get_kill_switch()` (presence 키 포함: `presence_engine_enabled`, `presence_seed_ratio`, `launch_presence_mode`)
+- **06_kill_switches** — 13키 seed + `get_kill_switch()` (presence 키 포함: `presence_engine_enabled`, `presence_seed_ratio`, `launch_presence_mode`, `presence_dynamic_updates_enabled`, `presence_update_intensity`)
 - **07_notifications** — notifications/preferences/push_tokens + RLS + RPC
 
 전 테이블 RLS ON. 모든 RPC `SECURITY DEFINER SET search_path=public`.
