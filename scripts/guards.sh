@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# PHONARA CI guards — fail fast on architectural violations.
+# Usage: bash scripts/guards.sh
+set -uo pipefail
+
+fail=0
+RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YEL=$'\033[0;33m'; NC=$'\033[0m'
+
+check() {
+  local label="$1"; local cmd="$2"
+  echo "${YEL}▶ ${label}${NC}"
+  local out
+  out=$(eval "$cmd" 2>/dev/null || true)
+  if [ -n "$out" ]; then
+    echo "${RED}✗ FAIL${NC}"
+    echo "$out"
+    fail=1
+  else
+    echo "${GREEN}✓ ok${NC}"
+  fi
+}
+
+# 1. client.server.ts must never be imported from client code.
+check "no client import of client.server.ts" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules --exclude-dir=.output --exclude-dir=dist \
+     -E \"from ['\\\"][^'\\\"]*supabase/client\\.server\" src \
+   | grep -v 'integrations/supabase/client.server.ts' \
+   | grep -v '\\.server\\.ts' \
+   | grep -v '\\.functions\\.ts'"
+
+# 2. No hard-coded hex colors in component/style code (use design tokens).
+#    Allow: src/styles.css, manifest, any .server.ts.
+check "no hardcoded hex colors in src" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E '#[0-9a-fA-F]{3,8}\\b' src \
+   | grep -v 'src/styles.css' \
+   | grep -v '\\.server\\.ts' \
+   | grep -v '// allow-hex'"
+
+# 3. No rgb()/rgba() literals in components.
+check "no rgb()/rgba() literals in src" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E 'rgba?\\([0-9]' src \
+   | grep -v 'src/styles.css' \
+   | grep -v '// allow-rgb'"
+
+# 4. src/pages/ is forbidden (TanStack Start uses src/routes/).
+check "no src/pages/ directory" \
+  "[ -d src/pages ] && echo 'src/pages/ exists — move files to src/routes/'"
+
+# 5. Direct `from \"sonner\"` import — must go through shared/lib/notify.
+check "no direct sonner imports outside notify.ts" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E \"from ['\\\"]sonner['\\\"]\" src \
+   | grep -v 'shared/lib/notify.ts' \
+   | grep -v 'components/ui/sonner'"
+
+echo ""
+if [ "$fail" -eq 0 ]; then
+  echo "${GREEN}All guards passed.${NC}"
+  exit 0
+else
+  echo "${RED}One or more guards failed.${NC}"
+  exit 1
+fi
