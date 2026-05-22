@@ -1,0 +1,30 @@
+{
+  "url": "https://id-preview--ff1ae9d8-bcad-405a-ac39-d887b54f4b6b.lovable.app",
+  "generatedAt": "2026-05-22T13:35:17.331Z",
+  "chromium": "/bin/chromium",
+  "ssrSnapshotCount": 0,
+  "csrSnapshotCount": 0,
+  "invariants": {
+    "firstImpression": {
+      "pass": true,
+      "violations": []
+    },
+    "movementWithin5s": {
+      "pass": false,
+      "observedMutations": 0
+    },
+    "noLockstep": {
+      "pass": true,
+      "offendingBuckets": []
+    },
+    "truthBoundary": {
+      "pass": true,
+      "match": null
+    }
+  },
+  "snapshots": {
+    "ssr": [],
+    "csr": []
+  },
+  "mutations": []
+}
