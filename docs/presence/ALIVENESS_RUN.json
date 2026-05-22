@@ -1,6 +1,6 @@
 {
   "url": "http://localhost:8080/",
-  "generatedAt": "2026-05-22T16:22:14.931Z",
+  "generatedAt": "2026-05-22T16:23:26.926Z",
   "chromium": "/bin/chromium",
   "ssrSnapshotCount": 5,
   "csrSnapshotCount": 5,
@@ -10,12 +10,20 @@
       "violations": []
     },
     "movementWithin5s": {
-      "pass": false,
-      "observedMutations": 16
+      "pass": true,
+      "observedMutations": 28
     },
     "noLockstep": {
-      "pass": true,
-      "offendingBuckets": []
+      "pass": false,
+      "offendingBuckets": [
+        {
+          "bucket": 9,
+          "kinds": [
+            "ticker",
+            "onboarding-counter"
+          ]
+        }
+      ]
     },
     "truthBoundary": {
       "pass": true,
@@ -100,116 +108,200 @@
   },
   "mutations": [
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 3947.79999999993,
+      "ts": 3932.0999999999767,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
+    },
+    {
+      "ts": 3957.1999999999534,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12431",
+      "after": "12432"
+    },
+    {
+      "ts": 3957.1999999999534,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3988.4000000000233,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12432",
+      "after": "12433"
+    },
+    {
+      "ts": 3988.4000000000233,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 4023.4000000000233,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12433",
+      "after": "12434"
+    },
+    {
+      "ts": 4023.4000000000233,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 4088.5999999999767,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12434",
+      "after": "12435"
+    },
+    {
+      "ts": 4088.5999999999767,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 4155.199999999953,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12435",
+      "after": "12436"
+    },
+    {
+      "ts": 4155.199999999953,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 4271.800000000047,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12436",
+      "after": "12437"
+    },
+    {
+      "ts": 4271.800000000047,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
     }
   ]
 }
