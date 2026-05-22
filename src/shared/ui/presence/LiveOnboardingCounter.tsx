@@ -13,14 +13,22 @@ export function LiveOnboardingCounter({ seed = 12431 }: { seed?: number }) {
     category: "onboarding",
     floor: 1000,
   });
+  const intValue = Math.round(value);
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-1 border border-border">
+    <div
+      data-presence="onboarding-counter"
+      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-1 border border-border"
+    >
       <OnlinePulseDot color="var(--success)" size={7} />
       <span className="text-sm text-foreground/90">
-        <span data-numeric className="font-tabular font-semibold text-foreground">
-          {formatKR(value)}
+        <span
+          data-numeric
+          data-value={intValue}
+          className="font-tabular font-semibold text-foreground"
+        >
+          {formatKR(intValue)}
         </span>{" "}
-        <span className="text-muted-foreground text-xs">
+        <span data-presence-text className="text-muted-foreground text-xs">
           {t("presence.online.now", { count: "" }).replace(" ", "")}
         </span>
       </span>

@@ -19,11 +19,13 @@ export function GlobalPulseChip() {
   const meta = LABELS[state] ?? LABELS.steady;
   return (
     <span
+      data-presence="global-pulse"
+      data-value={state}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-surface-2 border border-border"
       style={{ color: meta.color }}
     >
       <OnlinePulseDot color={meta.color} size={6} />
-      {t(meta.key)}
+      <span data-presence-text>{t(meta.key)}</span>
     </span>
   );
 }
