@@ -128,3 +128,34 @@ if (import.meta.hot) {
     teardown();
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dev-only telemetry inspection hook.
+//
+// In development, expose a read-only handle on `window.__presenceTelemetry`
+// so engineers can inspect rAF cost and per-source mutation counts directly
+// from DevTools without shipping any UI:
+//
+//   window.__presenceTelemetry.snapshot()
+//   window.__presenceTelemetry.reset()
+//
+// Guarded by BOTH `typeof window !== 'undefined'` (SSR / Workerd safety)
+// AND `import.meta.env.DEV` (never present in production bundles, so
+// production cannot be reverse-engineered via this surface). The handle
+// is `Object.freeze`d to prevent accidental method swapping.
+// ─────────────────────────────────────────────────────────────────────────
+declare global {
+  interface Window {
+    __presenceTelemetry?: {
+      snapshot: typeof getTelemetrySnapshot;
+      reset: typeof __resetTelemetry;
+    };
+  }
+}
+
+if (typeof window !== "undefined" && import.meta.env?.DEV) {
+  window.__presenceTelemetry = Object.freeze({
+    snapshot: getTelemetrySnapshot,
+    reset: __resetTelemetry,
+  });
+}
