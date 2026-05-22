@@ -2,7 +2,7 @@ import { useActiveRegions } from "@/shared/lib/presence/waveEngine";
 import { OnlinePulseDot } from "./OnlinePulseDot";
 
 export function RegionHeatBadge() {
-  const [top] = useActiveRegions(1);
+  const [top] = useActiveRegions(1, { jitterKey: "region-heat" });
   if (!top) return null;
   return (
     <span

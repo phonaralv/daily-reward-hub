@@ -8,7 +8,7 @@ import { OnlinePulseDot } from "./OnlinePulseDot";
  * Single GPU transform animation (defined in styles.css).
  */
 export function WorldwideTicker() {
-  const regions = useActiveRegions(4);
+  const regions = useActiveRegions(4, { jitterKey: "ticker" });
 
   const messages = useMemo(() => {
     const items: { id: string; text: string; color: string }[] = [];

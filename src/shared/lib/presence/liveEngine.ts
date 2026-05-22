@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotionSafe } from "@/shared/lib/useReducedMotionSafe";
-import { getTimeMultiplier } from "./waveEngine";
+import { getTimeMultiplier, PRESENCE_QUIET_WINDOW_MS } from "./waveEngine";
 import type { UpdateIntensity } from "./types";
 
 interface LiveCounterOpts {
@@ -110,6 +110,7 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
     if (typeof window === "undefined") return;
 
     let cancelled = false;
+    const mountedAt = performance.now();
     const lowEnd = isLowEnd();
     const scale = intensityScale(intensity) * getTimeMultiplier(category);
 
@@ -117,7 +118,11 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
       if (cancelled) return;
       const [lo, hi] = intervalMs;
       const baseDelay = rand(lo, hi) * (lowEnd ? 2 : 1);
-      const delay = baseDelay + offset.current;
+      // Enforce quiet window: first tick must land after deterministic
+      // slot takeovers complete (ALIVENESS §No Lockstep).
+      const elapsed = performance.now() - mountedAt;
+      const minDelay = Math.max(0, PRESENCE_QUIET_WINDOW_MS - elapsed);
+      const delay = Math.max(minDelay, baseDelay + offset.current);
       tickTimer.current = window.setTimeout(() => {
         if (document.hidden) {
           scheduleTick();
@@ -128,8 +133,7 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
         const next = Math.max(floor, targetRef.current + delta);
         targetRef.current = next;
         fromRef.current = display;
-        setDisplay((v) => v); // trigger ease effect via dep above
-        // kick animation
+        setDisplay((v) => v);
         if (reduced) {
           setDisplay(next);
           fromRef.current = next;
@@ -153,6 +157,9 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
     const scheduleWave = () => {
       if (cancelled) return;
       const [lo, hi] = waveMs;
+      const elapsed = performance.now() - mountedAt;
+      const minDelay = Math.max(0, PRESENCE_QUIET_WINDOW_MS - elapsed);
+      const delay = Math.max(minDelay, rand(lo, hi));
       waveTimer.current = window.setTimeout(() => {
         if (!document.hidden) {
           const [wMin, wMax] = waveDelta;
@@ -160,10 +167,9 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
           const big = Math.round(rand(wMin, wMax) * scale) * sign;
           const next = Math.max(floor, targetRef.current + big);
           targetRef.current = next;
-          // ride into ease via next small tick
         }
         scheduleWave();
-      }, rand(lo, hi));
+      }, delay);
     };
 
     scheduleTick();
