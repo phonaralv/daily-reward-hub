@@ -1,14 +1,16 @@
 import { createMiddleware } from "@tanstack/react-start";
+import { ln } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+
+type Database = Record<string, never>;
 
 /**
  * Server-side middleware: validates the bearer token from the request and
  * exposes an authenticated supabase client + userId in context.
  */
 export const requireSupabaseAuth = createMiddleware({ type: "function" }).server(
-  async ({ next, request }) => {
-    const authHeader = request.headers.get("Authorization");
+  async ({ next }) => {
+    const authHeader = ln("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       throw new Error("Unauthorized: No authorization header provided");
     }
