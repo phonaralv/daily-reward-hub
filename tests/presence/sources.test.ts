@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { heatRegionSource } from "@/shared/lib/presence/sources/heatRegionSource";
 import { liveCounterSource } from "@/shared/lib/presence/sources/liveCounterSource";
+import { tickerSource } from "@/shared/lib/presence/sources/tickerSource";
+import { countryCountSource } from "@/shared/lib/presence/sources/countryCountSource";
+import { rewardWaveSource } from "@/shared/lib/presence/sources/rewardWaveSource";
+import { trendingMissionSource } from "@/shared/lib/presence/sources/trendingMissionSource";
+import { onlineDotSource } from "@/shared/lib/presence/sources/onlineDotSource";
+import { worldActivityHeatSource } from "@/shared/lib/presence/sources/worldActivityHeatSource";
+import {
+  PRESENCE_SOURCE_KEYS,
+  type PresenceSourceKey,
+} from "@/shared/lib/presence/sources";
 import type { PresenceSource } from "@/shared/lib/presence/sources/types";
 import { useSource } from "@/shared/lib/presence/runtime/useSource";
 import {
