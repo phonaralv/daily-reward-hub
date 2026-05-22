@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotionSafe } from "@/shared/lib/useReducedMotionSafe";
-import { getTimeMultiplier } from "./waveEngine";
+import { getTimeMultiplier, PRESENCE_QUIET_WINDOW_MS } from "./waveEngine";
 import type { UpdateIntensity } from "./types";
 
 interface LiveCounterOpts {
