@@ -1,4 +1,4 @@
-import { getTimeMultiplier, PRESENCE_QUIET_WINDOW_MS } from "../waveEngine";
+import { getTimeMultiplier } from "../waveEngine";
 import type { UpdateIntensity } from "../types";
 import type { PresenceSource } from "./types";
 
@@ -104,10 +104,11 @@ export function liveCounterSource(
     firstPaint: () => seed,
     sample: (now, prev) => {
       if (mountedAt === null) {
+        // First call is gated by useSource's quiet window — treat `now` as
+        // our t=0 and schedule the first delta strictly in the future.
         mountedAt = now;
-        const earliest = mountedAt + PRESENCE_QUIET_WINDOW_MS;
-        nextTickAt = Math.max(earliest, planNextTick(mountedAt));
-        nextWaveAt = Math.max(earliest, planNextWave(mountedAt));
+        nextTickAt = planNextTick(now);
+        nextWaveAt = planNextWave(now);
       }
 
       // Ease step
