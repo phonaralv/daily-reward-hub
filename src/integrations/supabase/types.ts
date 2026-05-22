@@ -14,16 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ledger_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["ledger_kind"]
+          ref_id: string
+          ref_kind: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["ledger_kind"]
+          ref_id: string
+          ref_kind: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["ledger_kind"]
+          ref_id?: string
+          ref_kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_daily_reward: {
+        Args: never
+        Returns: {
+          amount: number
+          new_balance: number
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      ledger_kind: "daily_reward" | "quest_reward" | "adjustment" | "spend"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +221,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ledger_kind: ["daily_reward", "quest_reward", "adjustment", "spend"],
+    },
   },
 } as const
