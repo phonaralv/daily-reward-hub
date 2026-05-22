@@ -21,28 +21,44 @@ PR-1의 정체성은 “Presence가 살아있다”이다.
 
 `docs/presence/ALIVENESS.md` 신설. PR 전체의 북극성.
 
-다음 4가지를 1페이지로 명시한다.
+먼저 “살아있음”이 사용자 심리에서 무엇인지 정의한다.
+사람은 새 공간에 들어왔을 때 **3가지 무의식 질문**을 0.5~5초 안에 답으로 얻으려 한다.
 
-- **First Impression Invariant**
-  첫 화면 페인트 후 1초 이내에 사용자가 보는 모든 presence 문자열은 SSR과 동일해야 한다.
+1. “여기 진짜인가?” — 첫 화면이 어색하게 바뀌거나 깜빡이면 “가짜/베타”로 분류된다.
+2. “지금도 누가 쓰고 있는가?” — 정적이면 “버려진 사이트”로 분류된다.
+3. “이게 자동 스크립트인가, 진짜 흐름인가?” — 동시에 같이 움직이면 “fake”로 분류된다.
+
+이 3가지 질문을 만족시켜야만 “살아있는 글로벌 플랫폼”이라는 첫 인상이 형성된다.
+그 위에 “개인 정보가 노출되지 않는 신뢰감”까지 더해져야 PHONARA의 정체성이 된다.
+아래 4 invariant는 그 4가지 인식 — 진짜감 / 현재성 / 자연스러움 / 신뢰감 — 의 1:1 매핑이다.
+
+- **First Impression Invariant (→ 진짜감)**
+  첫 페인트 후 1초 이내 보이는 모든 presence 문자열은 SSR과 동일.
   region 이름, ticker 문구, 카운터 정수부, pulse 라벨 전부.
-  → 위반 시 “살아있음”이 아니라 “깜빡임”으로 인식된다.
+  심리: 첫 0.5초의 “깜빡임/교체”는 무의식이 “미완성”으로 분류한다.
+  Stake.com·Bybit 류 대형 플랫폼이 첫 진입에서 절대 보이지 않는 결함.
 
-- **Movement Within 5 Seconds**
-  마운트 후 5초 안에 화면에 보이는 presence 요소 중 **최소 1개**가 의미 있는 변화를 보인다.
-  (counter delta ≥ floor 변화 또는 pulse 단계 변화)
-  → 5초 동안 정지하면 “정적 페이지”로 인식된다.
+- **Movement Within 5 Seconds (→ 현재성)**
+  마운트 후 5초 안에 화면에 보이는 presence 요소 중 최소 1개가 의미 있는 변화.
+  (counter delta ≥ floor step, 또는 pulse 단계 변화)
+  심리: 5초는 인간이 “이 화면이 지금 흐르고 있는가”를 판정하는 임계.
+  넘으면 “정지된 페이지”로 분류되고, 다시 “움직임”을 봐도 회복이 어렵다.
 
-- **No Lockstep**
-  같은 뷰포트에 있는 presence 요소 중 동일 400ms 윈도우 안에서 동시에 갱신되는 요소는 1개를 넘지 않는다.
-  → 동시 갱신은 “자동 새로고침”의 인공적 느낌을 만든다.
+- **No Lockstep (→ 자연스러움)**
+  같은 뷰포트 presence 요소 중 동일 400ms 윈도우 안에서 동시에 갱신되는 요소는 1개 이하.
+  심리: 동시 갱신은 무의식이 즉시 “스크립트/자동 새로고침”으로 잡아낸다.
+  자연스러움은 “시간차”에서 온다. 400ms는 사람이 두 변화를 별도 사건으로 인식하는 하한.
 
-- **Truth Boundary**
-  presence 텍스트에는 개인 식별/개인 수익/출금 문구가 절대 등장하지 않는다.
+- **Truth Boundary (→ 신뢰감)**
+  presence 텍스트에 개인 식별/개인 수익/출금 문구가 절대 등장하지 않는다.
   aggregate(인원, 국가 수, region heat, global pulse)만 허용.
+  심리: 가짜 개인 수익은 단기 자극은 주지만, 한 번 들키면 신뢰 회복이 불가능.
+  PHONARA는 “전 지구적 흐름”으로 살아있음을 만들고, 개인은 PR-2 이후 실제 데이터로만 다룬다.
 
 이 4가지가 PR-1 내내 인용되는 단일 출처가 된다.
 이후 모든 단계의 “완료”는 이 4가지 invariant로만 판정한다.
+
+
 
 ## 0-B. Hydration & First Paint 수정
 
@@ -79,16 +95,65 @@ PR-1의 정체성은 “Presence가 살아있다”이다.
 
 ## 0-D. Aliveness 자동 체크 (실측 기반)
 
-`scripts/aliveness-check.mjs` 신설. CI에서 PR마다 돌릴 수 있게 한다.
+`scripts/aliveness-check.mjs` 신설. Playwright(Chromium headless)로 preview URL을 연다.
 
-검증 항목 — 0-A의 4 invariant를 직접 측정:
-- **First Impression Invariant**: SSR HTML 스냅샷의 presence 문자열 vs 마운트 후 1초 시점 DOM 비교. 다르면 fail.
-- **Movement Within 5 Seconds**: 5초간 DOM mutation 관찰. presence 영역에 의미 있는 텍스트 변화 0건이면 fail.
-- **No Lockstep**: mutation 타임라인을 400ms 버킷으로 묶어 동시 갱신 수가 2 이상인 버킷이 있으면 fail.
-- **Truth Boundary**: presence 영역 텍스트에 금지 패턴 매칭되면 fail (정규식은 0-A에 명시).
+### Presence 영역의 정의 (추출 대상)
 
-이로써 “Presence가 살아있다”가 코드로 검증 가능해진다.
-1단계부터는 이 스크립트가 회귀 방지선 역할을 한다.
+“presence 영역”은 자유 추정이 아니라 명시적으로 표시된 DOM만 본다.
+
+- 모든 presence 컴포넌트의 루트에 `data-presence` 속성을 부여한다.
+  값은 manifest kind: `online-count`, `countries`, `region-heat`,
+  `global-pulse`, `ticker`, `onboarding-counter`.
+  (0단계 코드 작업의 일부. build 모드에서 적용.)
+- 숫자 변화만 정확히 잡기 위해 카운터 정수부는 `data-numeric` + `data-value`
+  속성으로 노출 (`data-value`는 raw integer).
+- ticker/region 텍스트는 `data-presence-text` 영역 안의
+  텍스트 노드만 추출(아이콘/이모지 제외 위해 `:not([aria-hidden=true])`).
+
+스크립트 동작:
+
+1. `fetch(URL)`로 SSR HTML을 받아 `data-presence` 가진 노드의 텍스트와
+   `data-value`를 **SSR snapshot**으로 저장.
+2. Playwright로 같은 URL을 열고, `domcontentloaded` 직후 + 1000ms 시점에
+   동일 셀렉터의 텍스트/`data-value`를 **CSR snapshot**으로 저장.
+3. 그 후 5000ms 동안 `MutationObserver`를 page 컨텍스트에서 돌려
+   `[data-presence] *` 의 텍스트/`data-value` 변화 이벤트를
+   `{ts, kind, before, after}`로 수집해 반환받는다.
+
+### Invariant 판정
+
+- **First Impression Invariant**
+  SSR snapshot vs CSR snapshot(1000ms 시점) 비교.
+  `data-presence` 노드별로 `data-value`가 다르면 fail,
+  `data-presence-text` 영역 텍스트가 다르면 fail.
+  (이모지/공백/아이콘 차이는 무시: 비교 전에 `String.normalize("NFKC")` +
+  `\s+ → " "` + zero-width 제거.)
+
+- **Movement Within 5 Seconds**
+  5초 mutation 로그에서 `data-value` 변화가 manifest의 floor step 이상인
+  이벤트가 1건 이상, 또는 `global-pulse` 라벨이 다른 단계로 바뀐 이벤트가
+  1건 이상이면 pass. 아니면 fail.
+
+- **No Lockstep**
+  mutation 로그 타임스탬프를 400ms 버킷으로 묶고, 한 버킷에 서로 다른
+  `data-presence` kind가 2개 이상 변경되면 fail. 같은 kind 내부 다중 갱신은
+  허용(단일 카운터의 ease step일 수 있음).
+
+- **Truth Boundary**
+  CSR snapshot + mutation 로그의 모든 텍스트를 합쳐 금지 정규식 검사.
+  정규식은 0-A에 명시한 패턴을 그대로 사용:
+  `\busername\b|\bwithdrew\b|\bwithdrawal\b|earned\s*[$₩]|profit\s*[$₩]|\bKRW\s*\d|\bUSD\s*\d`.
+  매칭 시 fail + 매칭 노드의 `data-presence` 값 출력.
+
+### 출력
+
+`docs/presence/ALIVENESS_RUN.json`에 invariant별 pass/fail, 위반 노드,
+mutation 타임라인을 저장. 0단계 종료 보고에 함께 첨부.
+
+이로써 “Presence가 살아있다”가 코드로 검증 가능해지고,
+1단계부터는 이 스크립트가 회귀 방지선이 된다.
+
+
 
 ## 0단계 종료 조건 (이게 통과해야 1단계 플랜을 낸다)
 
