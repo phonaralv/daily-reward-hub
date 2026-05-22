@@ -14,10 +14,9 @@
  * Contract: subscribers MUST NOT call setInterval/setTimeout themselves.
  * All timing is derived from the `now` argument (performance.now()).
  */
+import { recordTick } from "./telemetry";
 
 export type PresenceTick = (now: number) => void;
-
-import { recordTick } from "./telemetry";
 
 const ticks = new Set<PresenceTick>();
 let rafId: number | null = null;
