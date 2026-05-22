@@ -1,148 +1,111 @@
-# PR-2 — PHONARA V2 핵심 경제/미션/소셜 루프 (apps/web)
+# PR-1 Polish — Foundation, Performance, Presence
 
-PR-1에서 만든 모바일 셸·PWA·Presence Engine·알림 토대 위에,
-**실제 유저가 돈/포인트를 벌고, 미션을 깨고, 친구를 끌고 오는 핵심 루프**를 구현한다.
-여전히 거래/슬롯의 *실제 외부 결제*는 mock — 실제 정산은 PR-3+.
+PR-1의 목표를 다시 확인하고, 문서 정확성과 저사양 모바일 성능 가드, Presence Layer 신뢰성을 마무리합니다. 비즈니스 로직(지갑/미션/슬롯/트레이드)은 PR-2로 유지합니다.
 
 ---
 
-## 0. 범위 원칙
+## 1. README.md 정정 (정확성 최우선)
 
-- **포함**: wallet 코어, 미션 엔진, 슬롯(무료/페이드 mock), 무료 플레이 루프, 리워드/뽑기, 레퍼럴/바이럴 루프, 계정/KYC stub, 일일 출석, FOMO/limited drop, 알림 트리거.
-- **제외(PR-3+)**: 실결제(toss/stripe/온체인), 실 KYC 벤더, 트레이딩 엔진(orderbook/match), 어드민 콘솔, 정산/세금, 푸시 토큰 실송신.
-- 모든 RPC는 **server-fn + `requireSupabaseAuth`**, 클라이언트는 절대 `client.server.ts` import 금지 (CI guard).
-- 모든 금액은 정수 minor-unit, `phon_amount` 도메인 타입. 클라이언트 가공 금지.
+가장 많이 참조될 문서이므로 실제 적용된 내용과 1:1로 맞춥니다.
 
----
-
-## 1. DB 마이그레이션 (Supabase ref `edlhlbwojgdnpdjhorpb`)
-
-순번은 PR-1에서 이어짐. 모두 RLS ON, 정책은 `auth.uid()` 기준.
-
-- `10_wallet.sql` — `wallets(user_id pk, phon bigint, locked bigint, updated_at)`, `wallet_ledger(id, user_id, delta, reason enum, ref_id, created_at)`. **single source of truth**, trigger로 ledger→wallet 합산 검증.
-- `11_missions.sql` — `missions(id, code, category, reward_phon, repeat enum, requires, active)`, `mission_progress(user_id, mission_id, progress jsonb, completed_at)`, `mission_claims(...)`.
-- `12_slots.sql` — `slot_machines(id, code, rtp, volatility, min_bet, max_bet, free_only)`, `slot_spins(id, user_id, machine_id, bet, payout, seed_hash, server_seed, client_seed, nonce, created_at)`. provably-fair commit/reveal.
-- `13_free_play.sql` — `free_play_sessions`, `free_play_drops` (시간당 무료 코인 한도, IP/디바이스 anti-abuse).
-- `14_referrals.sql` — `referral_codes(user_id pk, code unique)`, `referrals(referrer_id, referee_id unique, status, reward_state, created_at)`, `referral_rewards_ledger`.
-- `15_rewards.sql` — `reward_chests(id, tier, contents jsonb)`, `reward_grants(user_id, chest_id, opened_at, result jsonb)`, `daily_checkin(user_id, day_index, claimed_at)`.
-- `16_kill_switches.sql` — 기존 키 + `payouts_enabled`, `slots_enabled`, `referrals_enabled`, `free_play_enabled`, `daily_checkin_enabled`, `viral_boost_multiplier`.
-- `17_kyc_stub.sql` — `kyc_profiles(user_id pk, level enum tier0..tier3, country, status, updated_at)` — 실제 벤더 없이 셀프 신고만.
-
-`has_role()` SECURITY DEFINER + `user_roles(user_id, role app_role)`로 admin/operator 분리.
-
-## 2. 서버 함수 (`src/**/*.functions.ts`)
-
-전부 `requireSupabaseAuth` + Zod `inputValidator`. 응답은 `{ ok, data, error }` 통일.
-
-- `wallet.functions.ts` — `getWallet`, `getLedger({cursor,limit})`.
-- `missions.functions.ts` — `listMissions`, `progressMission({code, payload})`, `claimMission({id})`. 진행 검증은 서버.
-- `slots.functions.ts` — `commitSeed`, `spin({machineId, bet, clientSeed, nonce})`, `revealSeed`. RNG는 서버, `bet`은 `wallets.locked` flow.
-- `freePlay.functions.ts` — `claimHourlyDrop()`, rate-limit는 DB `unique(user_id, hour_bucket)`.
-- `referrals.functions.ts` — `getMyCode`, `redeemCode({code})`, `listMyReferrals`.
-- `rewards.functions.ts` — `openChest({grantId})`, `dailyCheckin()`.
-- `account.functions.ts` — `getProfile`, `updateNickname`, `setLocale`, `submitKycStub`.
-
-서버 라우트 (`src/routes/api/public/*`): `referral-share/$code` (OG 이미지/redirect), `pwa-install-callback` (서명 검증).
-
-## 3. 프런트 구조 (FSD 유지)
+### DB Migrations 섹션 — 실제 적용 순서로 교체
 
 ```text
-src/
-  entities/    wallet/  mission/  slot/  reward/  referral/  account/
-  features/    claim-mission/  spin-slot/  open-chest/  redeem-code/
-               daily-checkin/  free-play-claim/  install-reward/
-  widgets/     home-hero/  mission-board/  slot-rail/  reward-stream/
-               referral-card/  wallet-summary/  fomo-banner/
-  routes/      (기존 8개 라우트의 placeholder를 실제 widget으로 교체)
+01_extensions.sql        pgcrypto, citext
+02_roles_helpers.sql     app_role enum + user_roles + has_role()  (SECURITY DEFINER, search_path=public)
+03_profiles.sql          profiles + handle uniqueness
+04_wallets_ledger.sql    wallet + ledger 스켈레톤 (PR-2에서 mutation 추가)
+05_onboarding.sql        가입/활성화 추적 (presence seed 입력원)
+06_kill_switches.sql     feature_flags + presence_* 키
+                         (presence_engine_enabled, presence_dynamic_updates_enabled,
+                          presence_update_intensity, presence_seed_ratio,
+                          launch_presence_mode)
+07_notifications.sql     notifications + notification_prefs + Realtime
 ```
 
-각 entity는 `model/` (zustand+react-query selectors), `api/` (server-fn 래퍼), `ui/` (presentational).
+- 모든 테이블 RLS ON, 정책은 `auth.uid()` + `has_role()` 기반.
+- 모든 SECURITY DEFINER 함수는 `SET search_path = public` 명시.
+- PR-1은 wallet/ledger 테이블은 만들기만 하고 mutation 없음 — PR-2에서 server fn으로만 접근.
 
-## 4. 핵심 화면 교체 (PR-1 placeholder → 실 UI)
+### Stack 섹션 정리
 
-- `/` 홈: `WalletSummary` + `DailyCheckinStrip` + `MissionBoard(top3)` + `SlotRail` + `RewardStream` + `ReferralCard` + 기존 Presence 레이어 유지.
-- `/missions`: 카테고리 탭(데일리/위클리/이벤트/바이럴), virtualized list, claim 애니메이션(reduced-motion 대응).
-- `/slots`: 슬롯 그리드, free/paid 토글(`slots_enabled`/`free_play_enabled`로 자동 비활성).
-- `/play-free`: 시간당 카운트다운 + 클레임 버튼 + 누적 그래프(스파크라인).
-- `/wallet`: 잔액, 락된 금액, ledger 무한 스크롤, "출금 준비중(PR-3)" CTA.
-- `/refer`: 내 코드, 공유 시트(`navigator.share` + 폴백), 단계별 리워드 진행도, 친구 리스트.
-- `/trade`: "PR-3에서 오픈" + 워치리스트 placeholder + 가짜 차트 금지 (Presence ticker만 유지).
-- `/account`: 닉네임/언어/지역/KYC stub/알림 권한/PWA 설치 상태/로그아웃.
+- 현재 표기 정리: "TanStack Start v1 (React 19, Vite 7), Cloudflare Workers SSR, Tailwind v4 (HSL tokens in `src/styles.css`), External Supabase project `edlhlbwojgdnpdjhorpb` (Lovable Cloud 비활성), Zustand + TanStack Query, Framer Motion, Sonner는 `@/shared/lib/notify` 한 곳으로만."
+- "Lovable Cloud disabled" 문구가 PR-2 계획과 충돌 없는지 한 줄로 명시.
 
-## 5. 바이럴/FOMO 루프
+### 새 섹션 추가
 
-- **Daily check-in** 7일 사이클, 7일째 보상 ×3 (kill switch).
-- **Referral 단계 리워드**: 가입 → 첫 미션 → 첫 슬롯 → 7일 retention. 각 단계마다 *양쪽* 보상.
-- **Install reward hook**: PR-1의 `appinstalled` → `claimInstallReward` server-fn (1회, fingerprint 중복차단).
-- **Limited drop**: 매 4–6시간 랜덤 윈도우, 서버 스케줄 (`pg_cron` + `/api/public/cron/limited-drop`, HMAC 서명). UI는 PR-1 `RewardWaveBanner` 재사용.
-- **Streak surge**: 연속 N일 출석 시 multiplier, presence ticker에 자동 메시지 inject.
-- **Viral boost multiplier** kill switch로 운영자가 즉시 ×1.5/×2.
-
-## 6. 알림 트리거 (PR-1 큐 사용)
-
-서버에서 `notifications` insert:
-- 미션 완료/클레임 가능
-- 슬롯 잭팟(개인 threshold)
-- 리워드 체스트 도착
-- 친구가 가입/첫 미션 클리어
-- limited drop 오픈(broadcast)
-- check-in 리마인더(KST 21:00)
-
-각 트리거는 `notification_prefs`(PR-1) 키 존중. push 실송신은 PR-9까지 NOOP.
-
-## 7. Provably-fair 슬롯 (mock economy)
-
-- 서버: `server_seed`(per session) HMAC-SHA256 commit → 사용자 노출은 hash만, reveal은 세션 종료 시.
-- 클라이언트: `client_seed`, `nonce` 증가.
-- `payout = rngFromHmac(server_seed, client_seed, nonce) → paytable(machine)`.
-- 모든 spin은 `wallet_ledger`에 `bet`/`payout` 두 줄.
-
-## 8. Anti-abuse / 보안
-
-- Rate limit: free-play, claim, redeem-code는 `(user_id, action, minute_bucket)` unique.
-- Referral self-redeem 차단(같은 디바이스 fingerprint hash 검사).
-- Install reward 중복: `install_grants(user_id unique, device_hash)`.
-- 모든 mutate server-fn은 idempotency key 옵션.
-- Zod로 모든 input min/max/regex 강제 (특히 nickname/code).
-
-## 9. i18n / 카피
-
-- `ko` 우선 확장: mission/slot/reward/referral/wallet/account/error 네임스페이스 추가.
-- `en` 빈 키 lint로 감지(미번역은 ko fallback). 통화/숫자는 `Intl.NumberFormat('ko-KR')`, KST.
-
-## 10. Presence Engine 후속
-
-- 실 aggregate 이벤트가 들어오기 시작 → `presence_seed_ratio`를 운영이 수동 하향.
-- 신규: `useLiveCounter`에 **실 카운트 소스** 옵션 추가 (`source: 'seed' | 'realtime'`), `wallet_grants`/`mission_claims` Realtime 채널을 평균화해 ticker에 inject.
-
-## 11. 성능 목표
-
-- 홈 TTI 모바일 4G ≤ 2.5s 유지 (widget code-split).
-- mission/slot 리스트 1000행에서 60fps (react-virtuoso).
-- React Query: `wallet` staleTime 5s, `missions` 30s, `ledger` infinite cursor.
-- Realtime 채널은 라우트 단위로만 subscribe, unmount 시 close.
-
-## 12. CI 가드 (PR-1 확장)
-
-- `client.server.ts` client import 0건
-- 하드코딩 hex/rgb 0건
-- ko 키 누락 0건
-- server-fn 중 `requireSupabaseAuth` 미사용 + mutate 0건
-- Zod inputValidator 미설정 server-fn 0건
-
-## 13. PR-2 완료 정의 (DoD)
-
-1. 신규 가입 → 닉네임 → 데일리 출석 → 미션 1개 클레임 → 슬롯 free spin 1회 → 친구 코드 공유까지 **끊김 없이** 동작.
-2. 모든 화면 ko-first, 숫자 tabular, safe-area 정상, reduced-motion 정상.
-3. kill switch로 slots/referrals/free-play/payouts 각각 즉시 OFF 가능.
-4. PWA 설치 후 install reward 1회 지급 + 중복 차단 확인.
-5. `bun run build` 0 error, type-check 0 error, CI guard 통과.
+- **Vision & Non-negotiables** (맨 위): "2026년 저가 안드로이드에서 60fps, 30년 유지보수, Stake/Rollbit/Bybit 압도 품질" + Presence Layer 진실성 규칙(`src/shared/lib/presence/RULES.md` 링크).
+- **Performance Budget**: JS initial ≤ 180KB gz, LCP ≤ 2.5s on 3G/저사양, route chunk ≤ 60KB gz, presence tick CPU ≤ 1ms/frame, idle 시 setTimeout만 (RAF는 ease 중에만).
+- **GitHub Sync Verification**: 작업 후 커밋 확인 절차(아래 §2).
 
 ---
 
-### 기술 메모
+## 2. GitHub 반영 신뢰성
 
-- 서버 RNG는 `crypto.subtle.importKey` + HMAC (workerd 호환). Node `crypto` 미사용.
-- 모든 server-fn은 `method:"POST"` 통일 (mutate든 read든) — preflight 단순화.
-- `pg_cron` 스케줄은 `/api/public/cron/*`로 호출, HMAC `x-cron-signature` 강제.
-- 슬롯 결과 애니메이션은 framer-motion `useReducedMotion`로 분기, GPU transform만 사용.
+작업 직후 다음을 자동 보고:
+- 변경된 파일 목록 (이미 보고 중)
+- 마지막 커밋 SHA / 메시지가 변경분을 포함하는지 한 줄 확인
+- 누락 의심 시 사용자에게 즉시 알림 ("X 파일이 푸시되지 않았을 수 있음 — 확인 부탁")
+
+README의 *Contributing* 하위에 동일 체크리스트 명시.
+
+---
+
+## 3. PR-1 진짜 목표에 맞는 보강 (코드)
+
+비즈니스 로직 없이, **기반/성능/Presence**만 강화합니다.
+
+### 3.1 저사양 모바일 성능 가드
+
+- `src/shared/lib/perf/deviceTier.ts` 신설
+  - `deviceMemory`, `hardwareConcurrency`, `connection.effectiveType`, `navigator.userAgent`(저가 Android 힌트)로 `tier: "low" | "mid" | "high"` 산출.
+  - SSR-safe (`typeof navigator` 가드).
+- `liveEngine.ts`의 `isLowEnd()` → `useDeviceTier()` 로 교체, tier별 tick 간격/이즈 길이/RAF 사용 여부 분기.
+  - low: ease 끔(snap), tick 간격 2배, wave 진폭 0.6배.
+- `useGlobalPulse`도 동일 tier 반영.
+- 새 가드: `prefers-reduced-data` (지원 브라우저) 감지 시 presence intensity 자동 `low`.
+
+### 3.2 Presence Layer 신뢰성
+
+- `RULES.md` 위반 자동 가드 추가 (`scripts/guards.sh`):
+  - presence 컴포넌트에서 사용자명/금액/출금 같은 단어 정규식으로 차단 (`username|withdrew|earned\s*\$|\bKRW\s*\d`).
+  - presence 컴포넌트가 `localStorage`/`fetch` 직접 호출하지 않는지 체크 (aggregate 전용).
+- `useLiveCounter` 결정성: seed가 같으면 첫 1초 동안의 출력이 일관되도록 초기 jitter를 seed 기반 hash로 (SSR/CSR mismatch 방지).
+- Realtime: `useRealtimeChannel` 채널 키에 RLS 가시 범위가 섞이지 않는지 주석 + lint 주석 정리.
+
+### 3.3 Route-level 성능
+
+- 모든 `src/routes/*.tsx` 페이지 컴포넌트 lazy 분할은 TanStack가 자동 처리하지만, `__root.tsx`에서 무거운 provider/위젯이 항상 로드되지 않도록 점검.
+- `AppShell`에 `content-visibility: auto` + `contain: layout paint` 적용 가능한 영역 표시 (CSS 토큰만).
+- 이미지/아이콘: PR-1에는 SVG 인라인만, raster 금지 (가드 추가: `src/**` 안에서 `.png|.jpg` import 차단).
+
+### 3.4 i18n / 접근성 / 안전 기본값
+
+- `<html lang>` 동적 전환 확인 (ko/en).
+- `prefers-reduced-motion` + `prefers-reduced-data` 두 가지 모두 presence/animation에 연결.
+- Bottom nav / 헤더: 터치 타겟 ≥ 44px 가드 (Tailwind 토큰 점검).
+
+### 3.5 PWA (PR-1 범위 유지)
+
+- SW 등록은 production + non-preview 유지.
+- runtime caching은 PR-2.
+- 단, manifest `theme_color`/`background_color`가 HSL 토큰과 실제 일치하는지 README에 명시.
+
+---
+
+## 4. PR-2 인입 전 청소
+
+- `src/entities/`, `src/features/` README는 그대로 비워두되, PR-2 진입 시 추가할 첫 entity 목록만 한 줄 메모 추가 (`wallet`, `mission`, `slot`, `referral`, `chest`).
+- `.lovable/plan.md`(이 파일)에 PR-2 진입 조건 1줄: "guards.sh + lint + build 3개 모두 green, README §1 정정 완료, deviceTier 적용 확인."
+
+---
+
+## 작업 순서 (한 번에 처리)
+
+1. README.md 전체 재작성 (정확한 마이그레이션, Vision, Performance Budget, GitHub 체크리스트).
+2. `scripts/guards.sh`에 presence 진실성 가드 + raster import 가드 추가.
+3. `src/shared/lib/perf/deviceTier.ts` 신설 + `liveEngine.ts`/`useGlobalPulse` 연결.
+4. `useLiveCounter` seed-deterministic 초기화로 SSR mismatch 제거.
+5. `bash scripts/guards.sh` + build 확인 후 변경 파일 + 마지막 커밋 SHA 보고.
+
+PR-2는 이 PR이 모두 green일 때만 시작합니다.
