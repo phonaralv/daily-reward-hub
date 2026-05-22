@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { heatRegionSource } from "@/shared/lib/presence/sources/heatRegionSource";
 import { liveCounterSource } from "@/shared/lib/presence/sources/liveCounterSource";
+import { tickerSource } from "@/shared/lib/presence/sources/tickerSource";
+import { countryCountSource } from "@/shared/lib/presence/sources/countryCountSource";
+import { rewardWaveSource } from "@/shared/lib/presence/sources/rewardWaveSource";
+import { trendingMissionSource } from "@/shared/lib/presence/sources/trendingMissionSource";
+import { onlineDotSource } from "@/shared/lib/presence/sources/onlineDotSource";
+import { worldActivityHeatSource } from "@/shared/lib/presence/sources/worldActivityHeatSource";
+import {
+  PRESENCE_SOURCE_KEYS,
+  type PresenceSourceKey,
+} from "@/shared/lib/presence/sources";
 import type { PresenceSource } from "@/shared/lib/presence/sources/types";
 import { useSource } from "@/shared/lib/presence/runtime/useSource";
 import {
@@ -209,6 +219,70 @@ describe("presence/sources", () => {
       for (let i = firstChange + 1; i < values.length; i++) {
         expect(values[i]).toBeGreaterThanOrEqual(values[i - 1]);
       }
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // P1-1 — Source Catalog expansion (6 new sources + Registry)
+  //
+  // Each new source MUST satisfy the same two load-bearing contracts:
+  //  (a) firstPaint() is deterministic across repeated calls.
+  //  (b) sample(now, prev) returns `prev` BY REFERENCE when nothing has
+  //      meaningfully changed.
+  // ─────────────────────────────────────────────────────────────────────
+  describe("source catalog v2 — contract conformance", () => {
+    const builders: Array<{
+      name: string;
+      key: string;
+      make: () => PresenceSource<unknown>;
+    }> = [
+      { name: "tickerSource", key: "ticker:global", make: () => tickerSource() as PresenceSource<unknown> },
+      { name: "countryCountSource", key: "country:count", make: () => countryCountSource() as PresenceSource<unknown> },
+      { name: "rewardWaveSource", key: "reward:wave", make: () => rewardWaveSource() as PresenceSource<unknown> },
+      { name: "trendingMissionSource", key: "mission:trending", make: () => trendingMissionSource() as PresenceSource<unknown> },
+      { name: "onlineDotSource", key: "online:dot", make: () => onlineDotSource() as PresenceSource<unknown> },
+      { name: "worldActivityHeatSource", key: "world:activity", make: () => worldActivityHeatSource() as PresenceSource<unknown> },
+    ];
+
+    for (const { name, key, make } of builders) {
+      it(`${name}: declares the canonical telemetry key`, () => {
+        expect(make().key).toBe(key);
+      });
+
+      it(`${name}: firstPaint is deterministic`, () => {
+        const a = make().firstPaint();
+        const b = make().firstPaint();
+        // Deep equality is enough — references differ across factory calls,
+        // but the value shape must match exactly.
+        expect(b).toEqual(a);
+      });
+
+      it(`${name}: sample returns prev by REFERENCE when value is stable`, () => {
+        const src = make();
+        // Seed `prev` with the source's own current sample so subsequent
+        // identical samples have a stable baseline to compare against.
+        const seeded = src.sample(0, src.firstPaint());
+        const again = src.sample(0, seeded);
+        expect(again).toBe(seeded);
+      });
+    }
+  });
+
+  describe("source registry", () => {
+    it("PRESENCE_SOURCE_KEYS values are unique", () => {
+      const values = Object.values(PRESENCE_SOURCE_KEYS);
+      expect(new Set(values).size).toBe(values.length);
+    });
+
+    it("PresenceSourceKey covers every value (compile-time + runtime spot-check)", () => {
+      const sample: PresenceSourceKey = PRESENCE_SOURCE_KEYS.rewardWave;
+      expect(sample).toBe("reward:wave");
+    });
+  });
+
+  describe("rewardWaveSource — minIntervalMs gate", () => {
+    it("declares the 300ms cadence chosen for smooth-but-bounded ease", () => {
+      expect(rewardWaveSource().minIntervalMs).toBe(300);
     });
   });
 });

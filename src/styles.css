@@ -40,6 +40,18 @@
   --color-input: var(--border);
   --color-ring: var(--primary);
   --color-ring-offset-background: var(--background);
+
+  /* Presence Design Tokens v2 — surface tier (dark canvas) */
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-quiet: var(--surface-quiet);
+  --color-surface-aggregate: var(--surface-aggregate);
+  --color-surface-live: var(--surface-live);
+
+  /* Presence Design Tokens v2 — neon accents */
+  --color-accent-neon: var(--accent-neon);
+  --color-accent-pulse: var(--accent-pulse);
+  --color-accent-trust: var(--accent-trust);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -98,6 +110,42 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+
+  /*
+   * Presence Design Tokens v2 — dark canvas surface tier.
+   * Consumed by P1-3 Live* primitives. Existing surface-1/2/3 stay intact
+   * for backwards compatibility; new surfaces opt into the deeper canvas.
+   */
+  --surface-canvas: oklch(0.12 0.01 250);
+  --surface-quiet: oklch(0.16 0.01 250);
+  --surface-aggregate: oklch(0.19 0.015 250);
+  --surface-live: oklch(0.22 0.02 250);
+
+  /* Presence neon accents — used sparingly on live surfaces only. */
+  --accent-neon: oklch(0.85 0.22 145);
+  --accent-pulse: oklch(0.78 0.20 25);
+  --accent-trust: oklch(0.72 0.10 230);
+
+  /*
+   * Presence motion timings.
+   * Mirror runtime constants in src/shared/lib/presence/waveEngine.ts:
+   *   --motion-quiet  ↔ PRESENCE_FIRST_LIVE_DELAY_MS (1200ms)
+   *   --motion-wave   ↔ PRESENCE_QUIET_WINDOW_MS (3600ms)
+   * Change both sides together.
+   */
+  --motion-tick: 600ms;
+  --motion-pulse: 1800ms;
+  --motion-wave: 3600ms;
+  --motion-quiet: 1200ms;
+
+  /* Presence easings — single source of truth for Live* primitives. */
+  --ease-presence-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-presence-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-presence-breath: cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* Presence glow shadows — neon accent halos for live surfaces. */
+  --shadow-presence-soft: 0 0 24px -8px color-mix(in oklab, var(--accent-neon) 60%, transparent);
+  --shadow-presence-hot: 0 0 32px -4px color-mix(in oklab, var(--accent-pulse) 70%, transparent);
 }
 
 /* Dark is default. Light disabled for V1. */
@@ -141,6 +189,11 @@
 
 /* Reduced motion — neutralize animations/transitions for accessibility & low-end */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-tick: 0ms;
+    --motion-pulse: 0ms;
+    --motion-wave: 0ms;
+  }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
