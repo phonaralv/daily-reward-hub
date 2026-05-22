@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotionSafe } from "@/shared/lib/useReducedMotionSafe";
 import { getTimeMultiplier, PRESENCE_QUIET_WINDOW_MS } from "./waveEngine";
+import { subscribeTick } from "./runtime/scheduler";
 import type { UpdateIntensity } from "./types";
 
 interface LiveCounterOpts {
@@ -26,7 +27,7 @@ interface LiveCounterOpts {
   easeMs?: number;
 }
 
-// Global scheduler offset to prevent simultaneous updates across components.
+// Global offset stride to keep counter ticks staggered across instances.
 let globalOffset = 0;
 const nextOffset = (): number => {
   globalOffset = (globalOffset + 137) % 800; // prime stride
@@ -51,8 +52,12 @@ const isLowEnd = (): boolean => {
 };
 
 /**
- * Subtle live counter — natural, non-monotonic. Pauses on hidden tab.
- * Respects reduced-motion (snap, no easing).
+ * Subtle live counter — natural, non-monotonic.
+ *
+ * Step 1 (PR-1): all timing is driven by the single rAF scheduler
+ * (`subscribeTick`). Hidden-tab pausing, reduced-motion snapping, and
+ * the deterministic quiet window from waveEngine are preserved.
+ * External signature unchanged from Step 0.
  */
 export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
   const {
@@ -72,114 +77,77 @@ export function useLiveCounter(seed: number, opts: LiveCounterOpts = {}) {
   const [display, setDisplay] = useState(seed);
   const targetRef = useRef(seed);
   const fromRef = useRef(seed);
-  const rafRef = useRef<number | null>(null);
-  const tickTimer = useRef<number | null>(null);
-  const waveTimer = useRef<number | null>(null);
-  const offset = useRef(nextOffset());
+  const easeStartRef = useRef<number | null>(null);
+  const offsetRef = useRef(nextOffset());
 
-  // Animate display → target with easing
-  useEffect(() => {
-    if (reduced) {
-      setDisplay(targetRef.current);
-      fromRef.current = targetRef.current;
-      return;
-    }
-    const animate = () => {
-      const from = fromRef.current;
-      const to = targetRef.current;
-      const start = performance.now();
-      const dur = easeMs;
-      const step = (t: number) => {
-        const p = Math.min(1, (t - start) / dur);
-        const eased = 1 - Math.pow(1 - p, 3);
-        const v = from + (to - from) * eased;
-        setDisplay(v);
-        if (p < 1) rafRef.current = requestAnimationFrame(step);
-        else fromRef.current = to;
-      };
-      rafRef.current = requestAnimationFrame(step);
-    };
-    animate();
-    return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [display === seed ? seed : null, reduced, easeMs]); // re-run only when target shifts (display tracking)
-
-  // Schedule small ticks
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let cancelled = false;
     const mountedAt = performance.now();
     const lowEnd = isLowEnd();
     const scale = intensityScale(intensity) * getTimeMultiplier(category);
 
-    const scheduleTick = () => {
-      if (cancelled) return;
+    // Schedule first tick + first wave times.
+    const planNextTick = (now: number): number => {
       const [lo, hi] = intervalMs;
-      const baseDelay = rand(lo, hi) * (lowEnd ? 2 : 1);
-      // Enforce quiet window: first tick must land after deterministic
-      // slot takeovers complete (ALIVENESS §No Lockstep).
-      const elapsed = performance.now() - mountedAt;
-      const minDelay = Math.max(0, PRESENCE_QUIET_WINDOW_MS - elapsed);
-      const delay = Math.max(minDelay, baseDelay + offset.current);
-      tickTimer.current = window.setTimeout(() => {
-        if (document.hidden) {
-          scheduleTick();
-          return;
+      return now + rand(lo, hi) * (lowEnd ? 2 : 1) + offsetRef.current;
+    };
+    const planNextWave = (now: number): number => {
+      const [lo, hi] = waveMs;
+      return now + rand(lo, hi);
+    };
+
+    // Enforce the deterministic quiet window before either machine fires.
+    const earliest = mountedAt + PRESENCE_QUIET_WINDOW_MS;
+    let nextTickAt = Math.max(earliest, planNextTick(mountedAt));
+    let nextWaveAt = Math.max(earliest, planNextWave(mountedAt));
+
+    const applyDelta = (delta: number, now: number) => {
+      const next = Math.max(floor, targetRef.current + delta);
+      if (next === targetRef.current) return;
+      // Snap fromRef to whatever the displayed value currently is so the
+      // ease segment starts from the user-visible position.
+      fromRef.current = display;
+      targetRef.current = next;
+      if (reduced || easeMs <= 0) {
+        easeStartRef.current = null;
+        setDisplay(next);
+        fromRef.current = next;
+      } else {
+        easeStartRef.current = now;
+      }
+    };
+
+    const tick = (now: number) => {
+      // Ease step (also runs while no source-tick fires so animations are smooth)
+      if (easeStartRef.current !== null && !reduced && easeMs > 0) {
+        const p = Math.min(1, (now - easeStartRef.current) / easeMs);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const v = fromRef.current + (targetRef.current - fromRef.current) * eased;
+        setDisplay(v);
+        if (p >= 1) {
+          fromRef.current = targetRef.current;
+          easeStartRef.current = null;
         }
+      }
+
+      if (now >= nextTickAt) {
         const dMin = allowDecrease ? minDelta : Math.max(0, minDelta);
         const delta = Math.round(rand(dMin, maxDelta) * scale);
-        const next = Math.max(floor, targetRef.current + delta);
-        targetRef.current = next;
-        fromRef.current = display;
-        setDisplay((v) => v);
-        if (reduced) {
-          setDisplay(next);
-          fromRef.current = next;
-        } else {
-          const from = fromRef.current;
-          const start = performance.now();
-          const step = (t: number) => {
-            const p = Math.min(1, (t - start) / easeMs);
-            const eased = 1 - Math.pow(1 - p, 3);
-            setDisplay(from + (next - from) * eased);
-            if (p < 1) rafRef.current = requestAnimationFrame(step);
-            else fromRef.current = next;
-          };
-          if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-          rafRef.current = requestAnimationFrame(step);
-        }
-        scheduleTick();
-      }, delay);
+        applyDelta(delta, now);
+        nextTickAt = planNextTick(now);
+      }
+
+      if (now >= nextWaveAt) {
+        const [wMin, wMax] = waveDelta;
+        const sign = allowDecrease && Math.random() < 0.18 ? -1 : 1;
+        const big = Math.round(rand(wMin, wMax) * scale) * sign;
+        applyDelta(big, now);
+        nextWaveAt = planNextWave(now);
+      }
     };
 
-    const scheduleWave = () => {
-      if (cancelled) return;
-      const [lo, hi] = waveMs;
-      const elapsed = performance.now() - mountedAt;
-      const minDelay = Math.max(0, PRESENCE_QUIET_WINDOW_MS - elapsed);
-      const delay = Math.max(minDelay, rand(lo, hi));
-      waveTimer.current = window.setTimeout(() => {
-        if (!document.hidden) {
-          const [wMin, wMax] = waveDelta;
-          const sign = allowDecrease && Math.random() < 0.18 ? -1 : 1;
-          const big = Math.round(rand(wMin, wMax) * scale) * sign;
-          const next = Math.max(floor, targetRef.current + big);
-          targetRef.current = next;
-        }
-        scheduleWave();
-      }, delay);
-    };
-
-    scheduleTick();
-    scheduleWave();
-
-    return () => {
-      cancelled = true;
-      if (tickTimer.current) clearTimeout(tickTimer.current);
-      if (waveTimer.current) clearTimeout(waveTimer.current);
-    };
+    return subscribeTick(tick);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
