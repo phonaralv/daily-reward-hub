@@ -63,6 +63,22 @@ check "no direct sonner imports outside notify.ts" \
    | grep -v 'shared/lib/notify.ts' \
    | grep -v 'components/ui/sonner'"
 
+# 6. No direct setInterval/setTimeout inside the presence layer
+#    (except the scheduler itself). All timing must flow through subscribeTick.
+check "no setInterval/setTimeout in presence/ outside scheduler" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E '\\b(setInterval|setTimeout)\\b' src/shared/lib/presence src/shared/ui/presence \
+   | grep -v 'runtime/scheduler.ts'"
+
+# 7. presence UI components must not import the scheduler directly —
+#    they only use the public hooks (useLiveCounter, useActiveRegions, useGlobalPulse).
+check "presence UI does not import scheduler directly" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E \"from ['\\\"][^'\\\"]*presence/runtime/scheduler\" src/shared/ui"
+
+
 echo ""
 if [ "$fail" -eq 0 ]; then
   echo "${GREEN}All guards passed.${NC}"

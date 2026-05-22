@@ -80,3 +80,22 @@ PHONARA는 "전 지구적 흐름"으로 살아있음을 만들고, 개인은 PR-
 - PR-1: invariant 1, 4는 정적/실측으로 hard pass 필수. 2, 3은 baseline 측정 + 1단계 이후 개선.
 - PR-2 이후: 실제 aggregate 이벤트가 들어와도 동일 invariant 유지.
 - Kill switch (`presence_engine_enabled=false`) 시: invariant 2는 자동 면제, 1·3·4는 유지.
+
+---
+
+## 5. 단일 스케줄러 (PR-1 Step 1)
+
+모든 presence hook(`useLiveCounter`, `useActiveRegions`, `useGlobalPulse`)은
+`src/shared/lib/presence/runtime/scheduler.ts`의 `subscribeTick` 하나로
+타이밍을 받는다.
+
+- 활성 `requestAnimationFrame` 루프: 최대 1개 (구독자 ≥1일 때만)
+- 활성 `visibilitychange` 리스너: 정확히 1개
+- 활성 `setInterval`/`setTimeout` (presence 레이어 안): 0개 (`guards.sh` #6)
+- hidden tab → tick 콜백 0회 호출 → DOM mutation 0건
+- HMR: `import.meta.hot.dispose`로 좀비 rAF 차단
+- SSR: 모듈 load-time 부수효과 0, `subscribeTick`은 no-op cleanup 반환
+
+UI 컴포넌트는 scheduler를 직접 import할 수 없다 (`guards.sh` #7).
+hook을 통해서만 접근 — PR-2에서 source 교체 시에도 컴포넌트 변경 없음.
+

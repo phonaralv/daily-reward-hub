@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { REGIONS, type Region } from "@/shared/config/presence/regions";
+import { subscribeTick } from "./runtime/scheduler";
 import { hourInTz } from "@/shared/config/locale";
 
 /**
@@ -145,19 +146,19 @@ export function useActiveRegions(
   const [active, setActive] = useState<Region[]>(firstPaint);
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    const delayId = setTimeout(() => {
-      setActive(computeHeatRegions(count));
-      intervalId = setInterval(
-        () => setActive(computeHeatRegions(count)),
-        45_000,
-      );
-    }, firstLiveDelayMs + jitter);
+    if (typeof window === "undefined") return;
+    const mountedAt = performance.now();
+    const firstLiveAt = mountedAt + firstLiveDelayMs + jitter;
+    let nextAt = firstLiveAt;
+    const REFRESH_MS = 45_000;
 
-    return () => {
-      clearTimeout(delayId);
-      if (intervalId) clearInterval(intervalId);
+    const tick = (now: number) => {
+      if (now < nextAt) return;
+      setActive(computeHeatRegions(count));
+      nextAt = (now === firstLiveAt ? now : now) + REFRESH_MS;
     };
+
+    return subscribeTick(tick);
   }, [count, seed, firstLiveDelayMs, jitter]);
 
   return active;
