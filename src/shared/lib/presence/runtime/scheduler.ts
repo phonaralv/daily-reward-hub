@@ -11,7 +11,11 @@
  *
  * 이 모듈은 PR-1의 기반이며, 30년 후에도 유지보수 가능한 수준으로 설계됨.
  */
-import { recordTick } from "./telemetry";
+import {
+  recordTick,
+  getTelemetrySnapshot,
+  __resetTelemetry,
+} from "./telemetry";
 
 export type PresenceTick = (now: number) => void;
 
