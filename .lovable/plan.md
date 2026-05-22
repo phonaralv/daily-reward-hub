@@ -75,6 +75,19 @@ Seoul, Tokyo, Singapore, Bangkok, Los Angeles, New York, London, Berlin, Dubai, 
 ```
 ko 기본 + 글로벌 도시명 자연스럽게 혼합(예: "Tokyo · 도쿄 지금 활발해요 🔥").
 
+### Dynamic Presence Timing Engine (신규 — 정적 숫자 금지)
+
+`src/shared/lib/presence/liveEngine.ts`:
+- `useLiveCounter(seed, { minDelta, maxDelta, intervalMs:[2000,8000], waveMs:[30000,90000] })` — rAF easing + `setTimeout` 랜덤 interval. 증가만 X, 미세 감소도 허용. 동시 변경 방지(컴포넌트별 jitter offset).
+- 시간대 multiplier(`getTimeMultiplier(now)`): Asia prime → onboarding/activity ↑, NA evening → trade/reward ↑, KST 새벽 → low/steady.
+- Visibility/Perf: `document.hidden` → 일시정지 + 재개 시 fast-forward, `requestIdleCallback` 우선, 저사양(navigator.deviceMemory ≤ 2 or hardwareConcurrency ≤ 4) → interval ×2, reduced-motion → 즉시 점프(easing 없음).
+- Kill switch 연동: `presence_dynamic_updates_enabled` OFF → seed 정지값 유지, `presence_update_intensity` (low/normal/launch/viral)로 delta·interval 스케일.
+- 동시 변경 금지: 글로벌 `useLiveScheduler`가 컴포넌트들의 다음 tick을 분산(스큐 ±400ms).
+
+**적용 대상**: `LiveOnboardingCounter`, `ActiveCountriesIndicator`, `RewardWaveBanner`(텍스트 rotate), `MissionActivityPulse`, `WorldwideTicker` 메시지 rotate.
+
+**규칙**: 매초 변경 금지 / 동일 패턴 반복 금지 / 큰 점프 금지 / 모든 변경은 easing.
+
 ### UI 컴포넌트 (`src/shared/ui/presence/`)
 - `WorldwideTicker.tsx` — region/reward/mission/streak rotate marquee (GPU transform-only, reduced-motion 시 fade rotate)
 - `RegionHeatBadge.tsx` — pulse dot + KR/원어 도시명
