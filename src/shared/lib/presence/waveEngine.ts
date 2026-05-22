@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { REGIONS, type Region } from "@/shared/config/presence/regions";
-import { subscribeTick } from "./runtime/scheduler";
-import { hourInTz } from "@/shared/config/locale";
+import { hourInTz } from "@/shared/config/locale"; // allow-source-call
+import { useSource } from "./runtime/useSource";
+import { heatRegionSource } from "./sources/heatRegionSource";
 
 /**
  * Stable seed used for first-paint deterministic ordering.
