@@ -1,215 +1,256 @@
-# PR-1 Polish — Foundation (Presence-first, Low-end-real)
+# PR-1 Polish — PHONARA Foundation Reset
 
-PHONARA는 2026년 저가 안드로이드에서도 60fps에 가깝게 동작하고,
-30년 후에도 기술부채 없이 확장 가능한 글로벌 최고 수준의 모바일 플랫폼이다.
-PR-1은 "동작하는 코드"가 아니라 **Foundation**이다.
+이전 PR-1 Polish 플랜은 폐기한다. 새 기준은 “안전한 기반”이 아니라
+**Presence-first, low-end-real, PR-2-safe Foundation**이다.
 
-- Presence는 PHONARA의 정체성. 통계적 진실 + 살아있음의 체감 + 아키텍처 안정성.
-- 저사양 대응은 tier enum이 아니라 **RAF/타이머 예산 자체를 줄이는 구조**.
-- 지금 안 박아두면 PR-2(트레이딩/지갑/슬롯)에서 무너지는 규칙은 지금 박는다.
-- 비즈니스 mutation은 PR-1에서 절대 추가하지 않는다.
+PR-1의 성공 기준은 기능 수가 아니다.
+첫 진입자가 PHONARA를 “이미 전 세계에서 살아 움직이는 플랫폼”으로 느끼고,
+2026년 저가 안드로이드에서도 그 느낌이 끊기지 않으며,
+PR-2에서 트레이딩/지갑/슬롯을 얹어도 무너지지 않는 구조를 만드는 것이다.
 
-진행 원칙: 1단계 끝 → 변경 파일/SHA + guards/lint 결과 보고 → 사용자 승인 → 다음 단계.
-
----
-
-## 1단계 — Presence: 신뢰성 + 살아있음 + 아키텍처 (최우선, 가장 무겁다)
-
-가드 추가는 부수 작업이다. 1단계의 본질은 **Presence를 공유 clock 위로 재설계**하고,
-각 카운터에 **진실 계약(truth contract)** 을 코드 레벨로 박는 것이다.
-
-### 1-A. Presence Truth Contract (코드 + RULES.md)
-
-`src/shared/lib/presence/contracts.ts` 신설:
-
-- 각 presence 표시 요소(online count, countries, region heat, global pulse, ticker)에
-  타입화된 계약을 선언: `{ kind, floor, ceiling, maxDeltaPerTick, maxDeltaPerWave,
-  canDecrease, biasCategory }`.
-- `useLiveCounter`가 contract를 **인자로 강제**받도록 시그니처 변경
-  (기존 옵션 백 호환은 contract preset으로 흡수).
-- dev 빌드에서 contract 위반(범위 초과, 단조 증가 폭주 등) 시 `console.error` +
-  `notify.dev()` (prod 무음). PR-2에서 Sentry로 확장 여지.
-
-`src/shared/lib/presence/RULES.md` 상단에 "Why" 한 문단 +
-계약 표(각 kind별 floor/ceiling/허용 변화 범위)를 추가. **숫자가 곧 진실의 경계**임을 명시.
-
-### 1-B. Presence Clock (공유 RAF/타이머 1개)
-
-지금 `useLiveCounter`는 인스턴스마다 `setTimeout` + `requestAnimationFrame` 을 따로 돌린다.
-저사양에서 N개 카운터 = N개 타이머 = N개 RAF. 30년 유지보수 관점에서도 잘못됐다.
-
-`src/shared/lib/presence/clock.ts` 신설:
-
-- 앱 전역 단일 scheduler. 200ms tick 해상도 1개 + 단일 RAF loop 1개.
-- 컴포넌트는 `subscribe(intervalRange, cb)` / `subscribeAnimation(cb)` 만 한다.
-- `document.visibilitychange` 한 곳에서만 듣고 전체 일시정지/재개.
-- Page Lifecycle `freeze`/`resume` 이벤트도 같은 게이트로 처리.
-- resume 시 누적 시간 보정 없이 "다음 tick부터 자연 재개" (점프 금지).
-- stagger: subscribe 시 의사난수 오프셋 부여 → 같은 200ms 프레임에 2개 이상 변경 금지.
-
-`liveEngine.ts`는 이 clock 위에서 동작하도록 **재작성**한다.
-외부 API(`useLiveCounter`)는 contract 인자 추가 외 호환 유지.
-
-### 1-C. Reduced motion / 저전력 경로
-
-- `prefers-reduced-motion: reduce` → RAF 경로 자체를 구독하지 않음(스냅 값 직접 set).
-- 배터리 측면에서도 RAF가 안 도는 게 핵심. 단순 `easeMs=0`이 아니다.
-
-### 1-D. Presence 진실성 가드 (`scripts/guards.sh`)
-
-- `src/shared/ui/presence/**`, `src/shared/lib/presence/**`에서
-  사용자명/금액/출금/수익 정규식 차단:
-  `\busername\b|\bwithdrew\b|earned\s*[$₩]|\bKRW\s*\d|\bUSD\s*\d|\bprofit\s*[$₩]`
-- 동일 범위에서 `localStorage`, `sessionStorage`, `fetch(`, `XMLHttpRequest`,
-  `new WebSocket(` 직접 사용 차단 (데이터는 `useRealtimeChannel` + serverFn 경유만).
-- `useLiveCounter` 호출 시 contract 인자 없음 차단 (정규식 + 추후 ESLint로 강화).
-- 위반 시 `src/shared/lib/presence/RULES.md` 경로 출력.
-
-### 1단계 산출물 보고
-
-- 변경 파일 목록 + 커밋 SHA
-- `bash scripts/guards.sh` + `bun run lint` 결과
-- preview에서 다음 4가지 수동 확인 결과 보고:
-  1. 탭 숨김 5초 → 복귀 시 카운터 점프 없음
-  2. reduced-motion ON → 값이 ease 없이 스냅
-  3. 같은 화면 N개 카운터 동시 변동 없음(시각적 stagger)
-  4. dev에서 contract floor 위반 console.error 발생(의도적 1회)
-- 사용자 승인 후에만 2단계 진행
+진행 규칙:
+- 한 단계만 진행한다.
+- 단계 완료 후 변경 파일, 마지막 커밋 SHA, guards/lint, 검증 결과를 보고한다.
+- 사용자 승인 전 다음 단계로 넘어가지 않는다.
+- PR-1에서 비즈니스 mutation은 절대 추가하지 않는다.
 
 ---
 
-## 2단계 — 저사양 실측 기반 대응 (tier는 도구, 본질은 예산)
+## 0단계 — 현재 Presence 신뢰성 결함 즉시 고정
 
-목표: **저사양 기기에서 메인 스레드 작업/RAF 호출/네트워크 사용량을 실제로 줄인다.**
+현재 preview에 SSR hydration mismatch가 있다.
+예: 서버는 Berlin, 클라이언트는 London을 렌더링한다.
+이 상태에서는 “살아있음”이 아니라 “불안정함”을 느끼게 하므로 PR-1 첫 작업으로 처리한다.
 
-### 2-A. `src/shared/lib/perf/deviceTier.ts` (SSR-safe)
+목표:
+- SSR/CSR 첫 렌더가 같은 region/pulse/ticker 상태를 렌더링한다.
+- `Math.random()`, `Date.now()`, locale/timezone 차이로 첫 화면 텍스트가 바뀌지 않게 한다.
+- mounted 이후에만 live variation이 시작된다.
 
-- `getDeviceTier(): "low"|"mid"|"high"` 순수 함수, `useDeviceTier()` 훅.
-- 신호: `navigator.deviceMemory`, `hardwareConcurrency`, `connection.effectiveType`,
-  `connection.saveData`, `matchMedia("(prefers-reduced-data: reduce)")`.
-- SSR → `"mid"` 기본값. 마운트 후 1회 계산해 안정값.
-
-### 2-B. 1단계 clock을 tier-aware로
-
-- low: tick 해상도 400ms(2x), RAF subscriber 비활성(스냅 경로 사용),
-  wave delta 0.6x, 동시 활성 subscriber 상한(예: 4) — 초과는 가장 오래된 것부터 freeze.
-- mid: 현 기본값.
-- high: 변동 없음.
-
-### 2-C. PresenceBoundary
-
-`src/shared/ui/presence/PresenceBoundary.tsx`:
-
-- 자식 presence 트리를 감싸고, `tier === "low" && saveData === true` 또는
-  `presence_engine_enabled === false` 시 자식을 마운트하지 않음(=구독 0개).
-- 라우트 셸에서 presence 영역을 이 boundary로 감싼다.
-
-### 2-D. 관측 가능성 (dev only)
-
-- clock 모듈이 dev에서 분당 tick 수/활성 subscriber 수를 `window.__presence__`에 노출.
-- preview에서 확인 후 보고용 수치 캡처.
-
-### 2단계 산출물 보고
-
-- 변경 파일 목록 + SHA, guards/lint
-- DevTools CPU 4x throttle + Slow 3G로 강제 low tier 후:
-  - 분당 tick 수, 활성 subscriber 수
-  - 카운터가 끊김/점프 없이 차분히 도는지
-- 사용자 승인 후에만 3단계 진행
+산출물:
+- hydration mismatch 제거 확인
+- 변경 파일 목록, SHA, guards/lint 결과
+- 승인 후 1단계 진행
 
 ---
 
-## 3단계 — 아키텍처 위생 / 기술부채 방지 (PR-2 무너짐 예방)
+## 1단계 — Presence Experience System
 
-PR-2에서 트레이딩/지갑/슬롯을 넣을 때 아래가 없으면 무조건 무너진다.
+Presence를 개별 컴포넌트 묶음이 아니라 하나의 경험 시스템으로 만든다.
+가드는 마지막 방어선이고, 핵심은 **신뢰 가능한 aggregate 서사 + 안정적인 변화 리듬 + 일관된 SSR 초기 상태**다.
 
-### 3-A. 레이어 경계 강제 (`scripts/guards.sh` + ESLint)
+### 1-A. Presence Manifest
 
-- `src/shared/**` → `src/features/**` / `src/routes/**` import 금지
-- `src/shared/lib/presence/**` → `src/shared/lib/presence/**`,
-  `src/shared/lib/perf/**`, `src/shared/lib/notify`, `src/shared/config/i18n/**`,
-  `src/shared/lib/useRealtimeChannel`, `react`, `framer-motion` 외 import 금지
-- `src/integrations/supabase/client.server` → 클라이언트 코드 import 금지 (기존 유지 + ESLint `no-restricted-imports` 보강)
-- presence 트리에서 `framer-motion` 사용은 허용하되 `animate` prop만, `motion.*` 컴포넌트 사용 시 PresenceBoundary 안에서만 (eslint custom rule는 PR-2, PR-1은 guards.sh grep으로 워닝만)
+`src/shared/lib/presence/manifest.ts`를 만든다.
+모든 presence 표시는 manifest에 등록된 항목만 사용한다.
 
-### 3-B. 비즈니스 mutation 선제 차단
+각 항목은 다음을 가진다:
+- 목적: online count, active countries, region heat, global pulse, ticker
+- 표시 문구 범위: 개인 이름/개인 수익/출금 금지
+- floor/ceiling: 숫자의 현실성 경계
+- tick delta/wave delta: 변화 폭의 경계
+- canDecrease: 단조 증가 금지 여부
+- firstPaintValue: SSR/CSR 동일 초기값
+- emotionalRole: “활발함”, “글로벌감”, “안정감” 중 무엇을 전달하는지
 
-- `src/shared/**`, `src/routes/**` 에서 `from "@/features/wallet"`,
-  `"@/features/missions"`, `"@/features/slots"`, `"@/features/trade"`
-  import 시 guards.sh fail (해당 모듈이 아직 없어도 선제적으로 박는다).
+효과:
+- Presence가 “랜덤 숫자”가 아니라 제품 언어와 신뢰 경계를 가진 시스템이 된다.
+- PR-2에서 실제 aggregate 이벤트가 들어와도 같은 manifest로 흡수 가능하다.
 
-### 3-C. PR-1 핵심 규칙 1페이지
+### 1-B. Deterministic First Paint
 
-`docs/PR1_RULES.md` 신설:
+첫 렌더는 seed 기반 deterministic 값만 사용한다.
+mounted 이후 live engine이 움직인다.
 
-- 디자인 토큰만 사용 (hex/rgb 금지)
-- sonner는 `@/shared/lib/notify` 단일 진입점
-- `client.server.ts`는 서버 전용
-- Presence는 contract 기반 aggregate-only, 공유 clock 위에서만 동작
-- 모든 timer/RAF는 clock 모듈 경유, 직접 `setInterval`/`requestAnimationFrame` 금지(presence 범위)
-- `src/pages/` 금지
-- 비즈니스 mutation은 PR-2부터
+- region 선택, ticker 문구, 초기 counter jitter는 seed hash로 결정
+- 브라우저 시간/랜덤/locale 차이가 SSR 텍스트에 직접 들어가지 않게 차단
+- `useEffect` 이후에만 시간대 bias와 wave를 적용
 
-### 3단계 산출물 보고
+### 1-C. Presence Rhythm
 
-- 변경 파일 목록 + SHA, guards/lint
-- 의도적 위반 1건씩으로 각 신규 가드가 실제로 잡는지 sanity check 후 원복 보고
-- 사용자 승인 후에만 4단계 진행
+사용자는 “숫자가 움직인다”가 아니라 “세계가 움직인다”를 느껴야 한다.
+
+- 모든 카운터가 같은 순간 움직이지 않도록 stagger를 manifest 기반으로 고정
+- region heat, countries, online count가 서로 모순되지 않게 변화 폭을 제한
+- hidden tab 복귀 시 누적 변화 반영 금지: 다음 tick부터 자연 재개
+- reduced-motion에서는 움직임을 없애되 정보는 유지
+
+### 1-D. Truth Guard
+
+`scripts/guards.sh`에 presence 전용 가드를 추가한다.
+
+차단 범위:
+- `src/shared/ui/presence/**`
+- `src/shared/lib/presence/**`
+
+차단 패턴:
+- 사용자명/개인 식별: `username`, `userName`, `avatar`, `testimonial`
+- 개인 수익/출금: `withdrew`, `withdrawal`, `earned $`, `profit $`, `KRW 123`, `USD 123`
+- 직접 데이터 조작: `localStorage`, `sessionStorage`, `fetch(`, `XMLHttpRequest`, `new WebSocket(`
+- manifest 밖에서 임의 presence 숫자 생성
+
+위반 시 `src/shared/lib/presence/RULES.md` 경로를 함께 출력한다.
+
+### 1-E. Presence Rules 문서
+
+`RULES.md`를 단순 금지 목록에서 “Presence Philosophy + Contract” 문서로 바꾼다.
+
+포함 내용:
+- Presence는 통계적 진실만 보여준다.
+- 살아있음은 가짜 개인이 아니라 전 지구적 흐름에서 나온다.
+- 숫자 변화는 현실성 경계 안에서만 움직인다.
+- kill switch가 있으면 즉시 정지 가능해야 한다.
+
+검증:
+- hydration mismatch 없음
+- hidden tab 복귀 시 점프 없음
+- reduced-motion에서 snap
+- guards/lint green
+- 승인 후 2단계 진행
+
+---
+
+## 2단계 — Low-end Runtime Budget
+
+저사양 대응은 deviceTier 이름표가 아니다.
+목표는 presence가 사용하는 **타이머 수, RAF 수, 동시 업데이트 수, 메인 스레드 작업량**을 줄이는 것이다.
+
+### 2-A. Device Tier
+
+`src/shared/lib/perf/deviceTier.ts` 신설:
+- SSR 기본값: mid
+- low 조건: deviceMemory <= 2, hardwareConcurrency <= 4, slow-2g/2g/3g,
+  saveData, prefers-reduced-data
+- high 조건: 충분한 memory/cores + 빠른 네트워크
+- `getDeviceTier()`, `useDeviceTier()` 제공
+
+### 2-B. Presence Runtime Budget
+
+presence runtime에 tier별 예산을 둔다.
+
+```text
+low  : RAF 0 or 1, tick >= 400ms, active live counters <= 4, wave scale 0.6
+mid  : RAF 1,      tick >= 250ms, active live counters <= 8, wave scale 1.0
+high : RAF 1,      tick >= 200ms, active live counters <= 12, wave scale 1.0
+```
+
+적용 방식:
+- low tier에서는 easing보다 snap을 우선한다.
+- 화면 밖/비가시 presence는 업데이트하지 않는다.
+- 동시에 많은 presence 요소가 있으면 우선순위를 둔다:
+  1. global pulse
+  2. main online counter
+  3. region heat
+  4. secondary ticker
+
+### 2-C. Observability
+
+dev에서만 `window.__phonaraPresence`를 노출한다.
+
+확인 가능한 값:
+- active subscribers
+- ticks per minute
+- animation frames per minute
+- current tier
+- hidden/reduced-motion/saveData 상태
+
+검증:
+- CPU throttle + Slow 3G에서 subscriber/tick/RAF 수 보고
+- 카운터가 끊기거나 폭주하지 않는지 preview 확인
+- guards/lint green
+- 승인 후 3단계 진행
+
+---
+
+## 3단계 — PR-2 방어 아키텍처
+
+PR-2에서 트레이딩, 지갑, 슬롯이 들어오면 복잡도는 급증한다.
+PR-1에서 다음 경계를 코드와 문서로 고정한다.
+
+### 3-A. Dependency Direction
+
+가드/ESLint로 확인:
+- `src/shared/**`는 `src/features/**`, `src/routes/**`를 import하지 않는다.
+- `src/shared/lib/presence/**`는 presence/perf/config/notify/useRealtimeChannel 외 도메인 import 금지.
+- `client.server.ts`는 서버 전용. 클라이언트 import 금지.
+- `sonner`는 `@/shared/lib/notify`만 사용.
+- `src/pages/` 금지.
+
+### 3-B. Business Mutation Fence
+
+PR-1에서 다음을 금지한다:
+- wallet/trade/slot/mission mutation
+- fake balance, fake reward, fake trade event
+- client-side admin/role 판단
+- localStorage 기반 권한/경제 상태
+
+### 3-C. PR-1 Rules 문서
+
+`docs/PR1_RULES.md` 1페이지 작성:
+- Foundation의 목적
+- Presence contract/manifest 원칙
+- Low-end runtime budget 원칙
+- 데이터/권한/서버 경계
+- PR-2 전까지 금지되는 작업
+
+검증:
+- guards/lint green
+- 의도적 위반 sanity check 후 원복
+- 승인 후 4단계 진행
 
 ---
 
 ## 4단계 — README 정확화
 
-### 4-A. DB Migrations 실제 순서로 교체
+README는 마지막에 실제 코드와 맞춘다.
+
+수정 내용:
+- Vision 한 단락
+- PR-1 범위와 비범위
+- 실제 DB migration 순서
 
 ```text
 01_extensions.sql        pgcrypto, citext
 02_roles_helpers.sql     app_role enum + user_roles + has_role()
-                         (SECURITY DEFINER, SET search_path = public)
+                         SECURITY DEFINER + SET search_path = public
 03_profiles.sql          profiles + handle uniqueness
-04_wallets_ledger.sql    wallet + ledger 스켈레톤 (PR-1은 스키마만)
-05_onboarding.sql        가입/활성화 추적 (presence seed 입력원)
-06_kill_switches.sql     feature_flags + presence_* 키
-                         (presence_engine_enabled,
-                          presence_dynamic_updates_enabled,
-                          presence_update_intensity,
-                          presence_seed_ratio,
-                          launch_presence_mode)
+04_wallets_ledger.sql    wallet + ledger schema only
+05_onboarding.sql        onboarding / activation tracking
+06_kill_switches.sql     feature_flags + presence_* keys
 07_notifications.sql     notifications + notification_prefs + Realtime
 ```
 
-모든 테이블 RLS ON, 정책은 `auth.uid()` + `has_role()` 기반.
-모든 SECURITY DEFINER 함수는 `SET search_path = public`.
+명시:
+- 모든 테이블 RLS ON
+- 정책은 `auth.uid()` + `has_role()` 기반
+- 중요한 함수는 SECURITY DEFINER + `SET search_path = public`
+- PR-2 진입 조건: 0~4단계 green + 사용자 합의
 
-### 4-B. Vision 단락
+검증:
+- README와 실제 코드/마이그레이션 설명 일치
+- guards/lint green
+- PR-1 종료 여부 사용자 확인
 
-> PHONARA는 2026년 저가 안드로이드에서도 부드럽게 동작하고,
-> 30년 후에도 기술부채 없이 확장 가능한 글로벌 최고 수준의 모바일 플랫폼이다.
-> Presence Layer는 통계적 진실만 보여주며, 사용자가 첫 진입부터
-> "이미 전 세계에서 살아있는 플랫폼"으로 느끼게 한다.
+---
 
-### 4-C. PR-1 범위 / PR-2 진입 조건
+## 이번 PR에서 하지 않는 것
 
-- PR-1: shell, PWA(등록만), Presence(contract+clock), notifications, i18n, 가드/문서
-- PR-1 비포함: 지갑 mutation, 미션, 슬롯, 트레이딩, referrals,
-  PWA runtime caching(Workbox), Performance Budget 수치 문서화,
-  seed-deterministic 초기화, raster import 가드,
-  content-visibility/contain CSS
-- PR-2 진입: 1~4단계 green + 사용자 합의
+- 상세 Performance Budget 수치 문서화
+- Workbox/PWA runtime caching
+- raster image import guard
+- content-visibility / contain CSS
+- 트레이딩/지갑/미션/슬롯/referral business logic
+- fake 개인 이벤트
+- Sentry/analytics 연결
+- 대규모 디자인 리뉴얼
 
 ---
 
 ## PR-1 종료 조건
 
-- 1~4단계 완료
-- `bash scripts/guards.sh` + `bun run lint` green
-- 저사양 시뮬레이션에서 분당 tick 수/활성 subscriber 수가 합리적 범위
-- README가 실제 코드/마이그레이션과 정확히 일치
-- "PR-1 끝내도 된다"는 사용자 합의
-
-## 본 PR에서 일부러 하지 않는 것
-
-상세 Performance Budget 수치 문서화, `useLiveCounter` seed-deterministic 초기화,
-raster import 차단 가드, `content-visibility`/`contain` CSS,
-PWA runtime caching(Workbox), Sentry 연결, presence ESLint custom rule,
-비즈니스 도메인 코드, 한 번에 여러 단계 동시 진행.
+- hydration mismatch 없음
+- Presence manifest 기반, aggregate-only, deterministic first paint
+- 저사양 모드에서 runtime budget이 실제로 낮아짐
+- guards/lint green
+- README가 실제 상태와 일치
+- 사용자와 “PR-1 종료 가능” 합의
