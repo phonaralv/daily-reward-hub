@@ -1,0 +1,250 @@
+{
+  "url": "http://localhost:8080/",
+  "generatedAt": "2026-05-22T13:40:10.272Z",
+  "chromium": "/bin/chromium",
+  "ssrSnapshotCount": 5,
+  "csrSnapshotCount": 5,
+  "invariants": {
+    "firstImpression": {
+      "pass": true,
+      "violations": []
+    },
+    "movementWithin5s": {
+      "pass": true,
+      "observedMutations": 21
+    },
+    "noLockstep": {
+      "pass": true,
+      "offendingBuckets": []
+    },
+    "truthBoundary": {
+      "pass": true,
+      "match": null
+    }
+  },
+  "snapshots": {
+    "ssr": [
+      {
+        "index": 0,
+        "occurrence": 0,
+        "kind": "global-pulse",
+        "dataValue": "steady",
+        "text": "STEADY"
+      },
+      {
+        "index": 1,
+        "occurrence": 0,
+        "kind": "ticker",
+        "dataValue": null,
+        "text": "Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지 | Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지"
+      },
+      {
+        "index": 2,
+        "occurrence": 0,
+        "kind": "onboarding-counter",
+        "dataValue": "12431",
+        "text": "명지금 참여 중"
+      },
+      {
+        "index": 3,
+        "occurrence": 0,
+        "kind": "region-heat",
+        "dataValue": "berlin",
+        "text": "Berlin · 베를린"
+      },
+      {
+        "index": 4,
+        "occurrence": 0,
+        "kind": "countries",
+        "dataValue": "41",
+        "text": "🌐 41개국에서 참여 중"
+      }
+    ],
+    "csr": [
+      {
+        "index": 0,
+        "occurrence": 0,
+        "kind": "global-pulse",
+        "dataValue": "steady",
+        "text": "STEADY"
+      },
+      {
+        "index": 1,
+        "occurrence": 0,
+        "kind": "ticker",
+        "dataValue": null,
+        "text": "Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지 | Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지"
+      },
+      {
+        "index": 2,
+        "occurrence": 0,
+        "kind": "onboarding-counter",
+        "dataValue": "12431",
+        "text": "명지금 참여 중"
+      },
+      {
+        "index": 3,
+        "occurrence": 0,
+        "kind": "region-heat",
+        "dataValue": "berlin",
+        "text": "Berlin · 베를린"
+      },
+      {
+        "index": 4,
+        "occurrence": 0,
+        "kind": "countries",
+        "dataValue": "41",
+        "text": "🌐 41개국에서 참여 중"
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1349.4000000000233,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1843,
+      "kind": "global-pulse",
+      "field": "text",
+      "before": "",
+      "after": "GLOBAL SURGE"
+    },
+    {
+      "ts": 1843,
+      "kind": "global-pulse",
+      "field": "data-value",
+      "before": "steady",
+      "after": "global_surge"
+    },
+    {
+      "ts": 2848.9000000000233,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울"
+    },
+    {
+      "ts": 2848.9000000000233,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울"
+    },
+    {
+      "ts": 2848.9000000000233,
+      "kind": "region-heat",
+      "field": "data-value",
+      "before": "berlin",
+      "after": "seoul"
+    }
+  ]
+}
