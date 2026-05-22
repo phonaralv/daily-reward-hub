@@ -1,10 +1,29 @@
 import { useEffect, useState } from "react";
 import type { GlobalPulseState } from "./types";
-import { getTimeMultiplier } from "./waveEngine";
+import {
+  getTimeMultiplier,
+  PRESENCE_FIRST_LIVE_DELAY_MS,
+  stablePresenceHash,
+  PRESENCE_FIRST_PAINT_SEED,
+} from "./waveEngine";
 
-/** Global pulse — derived from time-of-day multipliers + smooth rotation. */
+/**
+ * Deterministic first-paint value for the global pulse.
+ * SSR and the first 1000ms of CSR both render this.
+ */
+export const GLOBAL_PULSE_FIRST_PAINT: GlobalPulseState = "steady";
+
+/**
+ * Global pulse hook.
+ *
+ * Hydration contract (ALIVENESS spec §First Impression Invariant):
+ * - First render returns GLOBAL_PULSE_FIRST_PAINT on both server and client.
+ * - Live time-based computation only starts after firstLiveDelayMs +
+ *   per-instance jitter, so it never violates the lockstep invariant
+ *   together with sibling presence hooks.
+ */
 export function useGlobalPulse(): GlobalPulseState {
-  const [state, setState] = useState<GlobalPulseState>("steady");
+  const [state, setState] = useState<GlobalPulseState>(GLOBAL_PULSE_FIRST_PAINT);
 
   useEffect(() => {
     const compute = (): GlobalPulseState => {
@@ -17,9 +36,19 @@ export function useGlobalPulse(): GlobalPulseState {
       if (peak >= 0.9) return "steady";
       return "low";
     };
-    setState(compute());
-    const id = setInterval(() => setState(compute()), 60_000);
-    return () => clearInterval(id);
+    // Per-kind jitter (0..600ms) keeps us out of the same 400ms bucket
+    // as ticker/region-heat. Deterministic per kind via stablePresenceHash.
+    const jitter =
+      stablePresenceHash(`${PRESENCE_FIRST_PAINT_SEED}:global-pulse`) % 600;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const delayId = setTimeout(() => {
+      setState(compute());
+      intervalId = setInterval(() => setState(compute()), 60_000);
+    }, PRESENCE_FIRST_LIVE_DELAY_MS + jitter);
+    return () => {
+      clearTimeout(delayId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   return state;

@@ -73,6 +73,12 @@ export interface UseActiveRegionsOptions {
   seed?: string;
   /** Delay before live takeover. Floored at PRESENCE_FIRST_LIVE_DELAY_MS. */
   firstLiveDelayMs?: number;
+  /**
+   * Per-call jitter key. Two components using the same hook with different
+   * `jitterKey` values will switch to live at different times, preventing
+   * the No-Lockstep invariant from firing on first takeover.
+   */
+  jitterKey?: string;
 }
 
 /**
@@ -82,8 +88,10 @@ export interface UseActiveRegionsOptions {
  * - First render on BOTH server and client returns
  *   `getDeterministicRegions(count, seed)` — a pure function of inputs.
  *   SSR HTML and the first hydrated DOM render identical text.
- * - After `firstLiveDelayMs` (>= 1200ms), the client switches to live
- *   heat-based ordering and refreshes every 45s. Server never runs this.
+ * - After `firstLiveDelayMs + jitter` (>= 1200ms), the client switches to
+ *   live heat-based ordering and refreshes every 45s. jitter (0..600ms,
+ *   deterministic per jitterKey) staggers sibling components so they never
+ *   land in the same 400ms lockstep bucket.
  */
 export function useActiveRegions(
   count: number = 4,
@@ -94,6 +102,9 @@ export function useActiveRegions(
     PRESENCE_FIRST_LIVE_DELAY_MS,
     opts.firstLiveDelayMs ?? PRESENCE_FIRST_LIVE_DELAY_MS,
   );
+  const jitter = opts.jitterKey
+    ? stablePresenceHash(`${seed}:jitter:${opts.jitterKey}`) % 600
+    : 0;
 
   const firstPaint = useMemo(
     () => getDeterministicRegions(count, seed),
@@ -109,16 +120,17 @@ export function useActiveRegions(
         () => setActive(computeHeatRegions(count)),
         45_000,
       );
-    }, firstLiveDelayMs);
+    }, firstLiveDelayMs + jitter);
 
     return () => {
       clearTimeout(delayId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [count, seed, firstLiveDelayMs]);
+  }, [count, seed, firstLiveDelayMs, jitter]);
 
   return active;
 }
+
 
 /** Time-bucket multipliers for different content types. */
 export function getTimeMultiplier(
