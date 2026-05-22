@@ -86,7 +86,8 @@ check "no value-computation primitives in presence hook files" \
      src/shared/lib/presence/useGlobalPulse.ts \
      src/shared/lib/presence/liveEngine.ts \
      src/shared/lib/presence/waveEngine.ts \
-   | grep -v '// allow-source-call'"
+   | grep -v '// allow-source-call' \
+   | grep -vE ':[[:space:]]*\\*'"
 
 
 echo ""
