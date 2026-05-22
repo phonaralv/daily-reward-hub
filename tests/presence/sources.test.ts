@@ -35,9 +35,7 @@ describe("presence/sources", () => {
     }
   });
 
-  it("useSource only calls source.sample once the minIntervalMs gate passes", () => {
-    // Custom source we fully control. minIntervalMs is huge so the second
-    // call inside the same render must not fire.
+  it("useSource only calls source.sample once the firstLiveDelay gate passes", () => {
     const sample = vi.fn((_now: number, prev: number) => prev);
     const fake: PresenceSource<number> = {
       key: "test:gate",
@@ -45,15 +43,15 @@ describe("presence/sources", () => {
       firstPaint: () => 0,
       sample,
     };
-    // Mount the hook and immediately unmount — sample should not have fired
-    // because the quiet window puts firstAt far in the future and no real
-    // rAF tick reaches it during this short test.
-    const { unmount } = renderHook(() => useSource(fake, { bypassQuietWindow: false }));
+    // Mount and immediately unmount. jsdom's rAF polyfill cannot deliver
+    // a `now` that exceeds the 1200ms first-live floor in this window,
+    // so sample must not have been called.
+    const { unmount } = renderHook(() => useSource(fake));
     expect(sample).not.toHaveBeenCalled();
     unmount();
   });
 
-  it("useSource skips React updates when sample returns prev by reference", () => {
+  it("useSource returns the firstPaint reference on the initial render", () => {
     const stable = { value: 42 };
     const sample = vi.fn(() => stable);
     const fake: PresenceSource<{ value: number }> = {
@@ -64,13 +62,10 @@ describe("presence/sources", () => {
     };
     const renders: Array<{ value: number }> = [];
     renderHook(() => {
-      const v = useSource(fake, { bypassQuietWindow: true });
+      const v = useSource(fake);
       renders.push(v);
       return v;
     });
-    // No rAF time has actually elapsed in jsdom enough to assert further;
-    // the contract under test is that the firstPaint render is the only
-    // render emitted when the source never produces a new reference.
     expect(renders.length).toBeGreaterThanOrEqual(1);
     expect(renders[0]).toBe(stable);
   });
