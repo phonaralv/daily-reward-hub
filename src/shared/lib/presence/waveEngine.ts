@@ -14,19 +14,34 @@ export function regionHeat(r: Region, now: Date = new Date()): number {
   return inPrime ? base * r.activityMultiplier + 0.4 : base * 0.6;
 }
 
-/** Region rotation: returns the N hottest regions right now. */
+/**
+ * Region rotation: returns the N hottest regions right now.
+ *
+ * Hydration contract (ALIVENESS spec §First Impression Invariant):
+ * - First render (SSR + first client render) returns a deterministic snapshot:
+ *   the first `count` regions in declaration order. This guarantees the SSR
+ *   HTML and the first hydrated DOM render identical region names.
+ * - After mount, an effect recomputes heat-based ordering and updates every 45s.
+ */
 export function useActiveRegions(count: number = 4): Region[] {
-  const [, tick] = useState(0);
+  const initial = REGIONS.slice(0, count);
+  const [active, setActive] = useState<Region[]>(initial);
+
   useEffect(() => {
-    const id = setInterval(() => tick((v) => v + 1), 45_000);
+    const compute = () =>
+      [...REGIONS]
+        .map((r) => ({ r, score: regionHeat(r) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, count)
+        .map(({ r }) => r);
+    setActive(compute());
+    const id = setInterval(() => setActive(compute()), 45_000);
     return () => clearInterval(id);
-  }, []);
-  return [...REGIONS]
-    .map((r) => ({ r, score: regionHeat(r) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, count)
-    .map(({ r }) => r);
+  }, [count]);
+
+  return active;
 }
+
 
 /** Time-bucket multipliers for different content types. */
 export function getTimeMultiplier(category: "onboarding" | "trade" | "reward" | "activity"): number {
