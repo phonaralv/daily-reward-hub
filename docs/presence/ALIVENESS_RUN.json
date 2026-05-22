@@ -1,6 +1,6 @@
 {
   "url": "http://localhost:8080/",
-  "generatedAt": "2026-05-22T16:24:08.247Z",
+  "generatedAt": "2026-05-22T16:26:37.813Z",
   "chromium": "/bin/chromium",
   "ssrSnapshotCount": 5,
   "csrSnapshotCount": 5,
@@ -10,8 +10,8 @@
       "violations": []
     },
     "movementWithin5s": {
-      "pass": false,
-      "observedMutations": 16
+      "pass": true,
+      "observedMutations": 19
     },
     "noLockstep": {
       "pass": true,
@@ -100,116 +100,137 @@
   },
   "mutations": [
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
     },
     {
-      "ts": 4056.9000000000233,
+      "ts": 1418.3999999999069,
       "kind": "ticker",
       "field": "text",
       "before": "",
       "after": "Bangkok · 방콕 지금 활발해요 🔥"
+    },
+    {
+      "ts": 2913.6999999999534,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Bangkok · 방콕"
+    },
+    {
+      "ts": 2913.6999999999534,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Bangkok · 방콕"
+    },
+    {
+      "ts": 2913.6999999999534,
+      "kind": "region-heat",
+      "field": "data-value",
+      "before": "berlin",
+      "after": "bangkok"
     }
   ]
 }
