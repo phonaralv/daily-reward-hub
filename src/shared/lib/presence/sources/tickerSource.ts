@@ -45,7 +45,6 @@ export function tickerSource(
 ): PresenceSource<readonly TickerItem[]> {
   const pool = buildPool(seed);
   const step = Math.max(1, Math.min(size, pool.length));
-  let cursor = 0;
 
   const slice = (start: number): TickerItem[] => {
     const out: TickerItem[] = new Array(step);
@@ -53,14 +52,15 @@ export function tickerSource(
     return out;
   };
 
+  const cursorFor = (now: number): number =>
+    (Math.floor(now / REFRESH_MS) * step) % pool.length;
+
   return {
     key: "ticker:global",
     minIntervalMs: REFRESH_MS,
     firstPaint: () => slice(0),
-    sample: (_now, prev) => {
-      const nextCursor = (cursor + step) % pool.length;
-      const next = slice(nextCursor);
-      cursor = nextCursor;
+    sample: (now, prev) => {
+      const next = slice(cursorFor(now));
       if (
         prev.length === next.length &&
         prev.every((it, i) => it.id === next[i].id)
