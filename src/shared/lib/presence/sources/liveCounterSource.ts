@@ -104,10 +104,10 @@ export function liveCounterSource(
     firstPaint: () => seed,
     sample: (now, prev) => {
       if (mountedAt === null) {
-        // First call is gated by useSource's quiet window — treat `now` as
-        // our t=0 and schedule the first delta strictly in the future.
+        // useSource has already enforced the quiet window. Fire the first
+        // delta immediately, then schedule subsequent waves naturally.
         mountedAt = now;
-        nextTickAt = planNextTick(now);
+        nextTickAt = now;
         nextWaveAt = planNextWave(now);
       }
 
