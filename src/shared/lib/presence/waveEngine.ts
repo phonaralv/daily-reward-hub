@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { REGIONS, type Region } from "@/shared/config/presence/regions";
+import { subscribeTick } from "./runtime/scheduler";
 import { hourInTz } from "@/shared/config/locale";
 
 /**
