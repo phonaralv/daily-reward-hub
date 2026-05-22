@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type { GlobalPulseState } from "./types";
-import {
-  getTimeMultiplier,
-  PRESENCE_FIRST_LIVE_DELAY_MS,
-  presenceLockstepJitter,
-} from "./waveEngine";
-import { subscribeTick } from "./runtime/scheduler";
+import { getTimeMultiplier } from "./waveEngine";
+import { useSource } from "./runtime/useSource";
+import type { PresenceSource } from "./sources/types";
 
 /**
  * Deterministic first-paint value for the global pulse.
@@ -26,39 +23,20 @@ function computePulse(): GlobalPulseState {
   return "low";
 }
 
+const globalPulseSource: PresenceSource<GlobalPulseState> = {
+  key: "global-pulse",
+  minIntervalMs: PULSE_REFRESH_MS,
+  firstPaint: () => GLOBAL_PULSE_FIRST_PAINT,
+  sample: (_now, prev) => {
+    const next = computePulse();
+    return next === prev ? prev : next;
+  },
+};
+
 /**
- * Global pulse hook.
- *
- * Step 1 (PR-1): driven by the single rAF scheduler. The Step 0
- * hydration contract is preserved — first render returns the
- * deterministic snapshot, live transition only starts after
- * `PRESENCE_FIRST_LIVE_DELAY_MS + jitter`.
+ * Global pulse hook — Step 2: delegates to a single inline PresenceSource.
  */
 export function useGlobalPulse(): GlobalPulseState {
-  const [state, setState] = useState<GlobalPulseState>(GLOBAL_PULSE_FIRST_PAINT);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mountedAt = performance.now();
-    const jitter = presenceLockstepJitter("global-pulse");
-    const firstLiveAt = mountedAt + PRESENCE_FIRST_LIVE_DELAY_MS + jitter;
-    let nextRefreshAt = firstLiveAt;
-    let started = false;
-
-    const tick = (now: number) => {
-      if (now < firstLiveAt) return;
-      if (now >= nextRefreshAt) {
-        setState(computePulse());
-        started = true;
-        nextRefreshAt = now + PULSE_REFRESH_MS;
-      } else if (!started) {
-        // edge: should not happen but keeps the contract explicit.
-        started = true;
-      }
-    };
-
-    return subscribeTick(tick);
-  }, []);
-
-  return state;
+  const source = useMemo(() => globalPulseSource, []);
+  return useSource(source, { jitterKey: "global-pulse" });
 }
