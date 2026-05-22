@@ -1,0 +1,348 @@
+{
+  "url": "http://localhost:8080/",
+  "generatedAt": "2026-05-22T15:41:27.880Z",
+  "chromium": "/bin/chromium",
+  "ssrSnapshotCount": 5,
+  "csrSnapshotCount": 5,
+  "invariants": {
+    "firstImpression": {
+      "pass": true,
+      "violations": []
+    },
+    "movementWithin5s": {
+      "pass": true,
+      "observedMutations": 35
+    },
+    "noLockstep": {
+      "pass": true,
+      "offendingBuckets": []
+    },
+    "truthBoundary": {
+      "pass": true,
+      "match": null
+    }
+  },
+  "snapshots": {
+    "ssr": [
+      {
+        "index": 0,
+        "occurrence": 0,
+        "kind": "global-pulse",
+        "dataValue": "steady",
+        "text": "STEADY"
+      },
+      {
+        "index": 1,
+        "occurrence": 0,
+        "kind": "ticker",
+        "dataValue": null,
+        "text": "Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지 | Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지"
+      },
+      {
+        "index": 2,
+        "occurrence": 0,
+        "kind": "onboarding-counter",
+        "dataValue": "12431",
+        "text": "명지금 참여 중"
+      },
+      {
+        "index": 3,
+        "occurrence": 0,
+        "kind": "region-heat",
+        "dataValue": "berlin",
+        "text": "Berlin · 베를린"
+      },
+      {
+        "index": 4,
+        "occurrence": 0,
+        "kind": "countries",
+        "dataValue": "41",
+        "text": "🌐 41개국에서 참여 중"
+      }
+    ],
+    "csr": [
+      {
+        "index": 0,
+        "occurrence": 0,
+        "kind": "global-pulse",
+        "dataValue": "steady",
+        "text": "STEADY"
+      },
+      {
+        "index": 1,
+        "occurrence": 0,
+        "kind": "ticker",
+        "dataValue": null,
+        "text": "Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지 | Berlin · 베를린 지금 활발해요 🔥 | Singapore · 싱가포르 지금 활발해요 🔥 | New York · 뉴욕 지금 활발해요 🔥 | Bangkok · 방콕 지금 활발해요 🔥 | 새 리워드 웨이브가 방금 열렸어요 | 오늘 밤 미션 트래픽이 급상승 중 | 연속 출석 도전이 폭발 중 | 글로벌 활동 급증 감지"
+      },
+      {
+        "index": 2,
+        "occurrence": 0,
+        "kind": "onboarding-counter",
+        "dataValue": "12431",
+        "text": "명지금 참여 중"
+      },
+      {
+        "index": 3,
+        "occurrence": 0,
+        "kind": "region-heat",
+        "dataValue": "berlin",
+        "text": "Berlin · 베를린"
+      },
+      {
+        "index": 4,
+        "occurrence": 0,
+        "kind": "countries",
+        "dataValue": "41",
+        "text": "🌐 41개국에서 참여 중"
+      }
+    ]
+  },
+  "mutations": [
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1138.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르 지금 활발해요 🔥"
+    },
+    {
+      "ts": 2634.3000000000466,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르"
+    },
+    {
+      "ts": 2634.3000000000466,
+      "kind": "region-heat",
+      "field": "text",
+      "before": "",
+      "after": "Singapore · 싱가포르"
+    },
+    {
+      "ts": 2634.3000000000466,
+      "kind": "region-heat",
+      "field": "data-value",
+      "before": "berlin",
+      "after": "singapore"
+    },
+    {
+      "ts": 3549.3000000000466,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12431",
+      "after": "12432"
+    },
+    {
+      "ts": 3549.3000000000466,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3580.5,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12432",
+      "after": "12433"
+    },
+    {
+      "ts": 3580.5,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3613.8000000000466,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12433",
+      "after": "12434"
+    },
+    {
+      "ts": 3613.8000000000466,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3648.3000000000466,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12434",
+      "after": "12435"
+    },
+    {
+      "ts": 3648.3000000000466,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3679.9000000000233,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12435",
+      "after": "12436"
+    },
+    {
+      "ts": 3679.9000000000233,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3730.0999999999767,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12436",
+      "after": "12437"
+    },
+    {
+      "ts": 3730.0999999999767,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3796.6999999999534,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12437",
+      "after": "12438"
+    },
+    {
+      "ts": 3796.6999999999534,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    },
+    {
+      "ts": 3896.5,
+      "kind": "onboarding-counter",
+      "field": "data-value",
+      "before": "12438",
+      "after": "12439"
+    },
+    {
+      "ts": 3896.5,
+      "kind": "onboarding-counter",
+      "field": "text",
+      "before": "",
+      "after": "명지금 참여 중"
+    }
+  ]
+}
