@@ -3,6 +3,9 @@
  * PHONARA Aliveness Check — validates the 4 invariants from
  * docs/presence/ALIVENESS.md against a live preview URL.
  *
+ * SSR parsing runs inside the browser page context using the real DOMParser
+ * (Blink), so SSR and CSR snapshots are extracted by the SAME logic.
+ *
  * Output: docs/presence/ALIVENESS_RUN.json + non-zero exit on failure.
  *
  * Usage:
@@ -10,129 +13,163 @@
  *
  * Default URL: $PHONARA_ALIVENESS_URL or http://localhost:3000/
  *
- * Requires playwright at runtime.
+ * Uses puppeteer-core + the system Chromium at /bin/chromium (or
+ * $PHONARA_CHROMIUM_PATH). No browser download is required.
  */
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, access } from "node:fs/promises";
 import { dirname } from "node:path";
 
-const URL_ARG = process.argv[2] || process.env.PHONARA_ALIVENESS_URL || "http://localhost:3000/";
+const URL_ARG =
+  process.argv[2] ||
+  process.env.PHONARA_ALIVENESS_URL ||
+  "http://localhost:3000/";
 const OUT = "docs/presence/ALIVENESS_RUN.json";
 const FIRST_PAINT_WAIT_MS = 1000;
 const MUTATION_WINDOW_MS = 5000;
 const LOCKSTEP_BUCKET_MS = 400;
-const TRUTH_REGEX =
-  /\busername\b|\bwithdrew\b|\bwithdrawal\b|earned\s*[$₩]|profit\s*[$₩]|\bKRW\s*\d|\bUSD\s*\d/i;
+const TRUTH_REGEX_SRC =
+  "\\busername\\b|\\bwithdrew\\b|\\bwithdrawal\\b|earned\\s*[$\u20a9]|profit\\s*[$\u20a9]|\\bKRW\\s*\\d|\\bUSD\\s*\\d";
 
-let chromium;
+const CHROMIUM_PATH = process.env.PHONARA_CHROMIUM_PATH || "/bin/chromium";
+
+let puppeteer;
 try {
-  ({ chromium } = await import("playwright"));
+  puppeteer = (await import("puppeteer-core")).default;
 } catch {
   console.error(
-    "[aliveness] playwright not installed. Run: bun add -d playwright && bunx playwright install chromium"
+    "[aliveness] puppeteer-core not installed. Run: PUPPETEER_SKIP_DOWNLOAD=1 bun add -d puppeteer-core",
   );
   process.exit(2);
 }
 
-const norm = (s) =>
-  (s ?? "")
-    .normalize("NFKC")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+try {
+  await access(CHROMIUM_PATH);
+} catch {
+  console.error(
+    `[aliveness] Chromium not found at ${CHROMIUM_PATH}. Set PHONARA_CHROMIUM_PATH.`,
+  );
+  process.exit(2);
+}
 
-function extractFromHtml(html) {
+/**
+ * Extractor source — injected verbatim into the page context so SSR and
+ * CSR snapshots are produced by the SAME function running in Blink.
+ */
+const EXTRACTOR_SRC = `
+function __phonaraNorm(s) {
+  return (s == null ? "" : String(s))
+    .normalize("NFKC")
+    .replace(/[\\u200B-\\u200D\\uFEFF]/g, "")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+function __phonaraExtractPresenceSnapshot(root) {
+  const nodes = root.querySelectorAll("[data-presence]");
   const out = [];
-  const re = /<([a-z][a-z0-9-]*)\b([^>]*\bdata-presence=("[^"]*"|'[^']*'))([^>]*)>([\s\S]*?)<\/\1>/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    const attrs = m[2] + m[4];
-    const kindMatch = /data-presence=("([^"]*)"|'([^']*)')/i.exec(attrs);
-    const valMatch = /data-value=("([^"]*)"|'([^']*)')/i.exec(attrs);
-    const kind = (kindMatch?.[2] ?? kindMatch?.[3] ?? "").trim();
-    const dataValue = valMatch ? (valMatch[2] ?? valMatch[3] ?? "") : null;
-    const inner = m[5];
-    const textMatches = [...inner.matchAll(/<[^>]*\bdata-presence-text\b[^>]*>([\s\S]*?)<\//gi)]
-      .map((mm) => norm(mm[1].replace(/<[^>]+>/g, "")));
-    const text = textMatches.join(" | ");
-    out.push({ kind, dataValue, text });
+  const counters = Object.create(null);
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const kind = node.getAttribute("data-presence") || "";
+    const occurrence = (counters[kind] = (counters[kind] || 0) + 1) - 1;
+    const rootValue = node.getAttribute("data-value");
+    const descendant = node.querySelector("[data-value]");
+    const descendantValue = descendant ? descendant.getAttribute("data-value") : null;
+    const dataValue = rootValue != null ? rootValue : descendantValue;
+    const textNodes = node.querySelectorAll("[data-presence-text]");
+    let text;
+    if (textNodes.length) {
+      const parts = [];
+      for (let j = 0; j < textNodes.length; j++) {
+        parts.push(__phonaraNorm(textNodes[j].textContent || ""));
+      }
+      text = parts.join(" | ");
+    } else {
+      text = __phonaraNorm(node.textContent || "");
+    }
+    out.push({ index: i, occurrence, kind, dataValue, text });
   }
   return out;
 }
-
-async function snapshotDom(page) {
-  return page.$$eval("[data-presence]", (nodes) => {
-    const norm = (s) =>
-      (s ?? "")
-        .normalize("NFKC")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    return nodes.map((n) => {
-      const kind = n.getAttribute("data-presence") || "";
-      const dataValue = n.getAttribute("data-value");
-      const textNodes = n.querySelectorAll("[data-presence-text]");
-      const text = textNodes.length
-        ? [...textNodes].map((t) => norm(t.textContent || "")).join(" | ")
-        : norm(n.textContent || "");
-      return { kind, dataValue, text };
-    });
-  });
-}
+`;
 
 function compareSnapshots(ssr, csr) {
   const violations = [];
-  const ssrByKind = new Map();
-  for (const s of ssr) {
-    const list = ssrByKind.get(s.kind) || [];
-    list.push(s);
-    ssrByKind.set(s.kind, list);
-  }
-  const csrByKind = new Map();
-  for (const c of csr) {
-    const list = csrByKind.get(c.kind) || [];
-    list.push(c);
-    csrByKind.set(c.kind, list);
-  }
-  const kinds = new Set([...ssrByKind.keys(), ...csrByKind.keys()]);
-  for (const kind of kinds) {
-    const a = ssrByKind.get(kind) || [];
-    const b = csrByKind.get(kind) || [];
-    const n = Math.max(a.length, b.length);
-    for (let i = 0; i < n; i++) {
-      const sa = a[i];
-      const sb = b[i];
-      if (!sa || !sb) {
-        violations.push({ kind, index: i, reason: "presence node count mismatch", ssr: sa, csr: sb });
-        continue;
-      }
-      if ((sa.dataValue ?? null) !== (sb.dataValue ?? null)) {
-        violations.push({ kind, index: i, reason: "data-value mismatch", ssr: sa.dataValue, csr: sb.dataValue });
-      }
-      if (sa.text !== sb.text) {
-        violations.push({ kind, index: i, reason: "presence text mismatch", ssr: sa.text, csr: sb.text });
-      }
+  const byKey = (arr) => {
+    const m = new Map();
+    for (const s of arr) m.set(`${s.kind}#${s.occurrence}`, s);
+    return m;
+  };
+  const ssrMap = byKey(ssr);
+  const csrMap = byKey(csr);
+  const keys = new Set([...ssrMap.keys(), ...csrMap.keys()]);
+  for (const key of keys) {
+    const a = ssrMap.get(key);
+    const b = csrMap.get(key);
+    if (!a || !b) {
+      violations.push({ key, reason: "presence node missing on one side", ssr: a, csr: b });
+      continue;
+    }
+    if ((a.dataValue ?? null) !== (b.dataValue ?? null)) {
+      violations.push({
+        key,
+        reason: "data-value mismatch",
+        ssr: a.dataValue,
+        csr: b.dataValue,
+      });
+    }
+    if (a.text !== b.text) {
+      violations.push({
+        key,
+        reason: "presence text mismatch",
+        ssr: a.text,
+        csr: b.text,
+      });
     }
   }
   return violations;
 }
 
 async function main() {
-  const ssrHtml = await fetch(URL_ARG, { headers: { accept: "text/html" } }).then((r) => r.text());
-  const ssrSnap = extractFromHtml(ssrHtml);
+  const ssrResp = await fetch(URL_ARG, { headers: { accept: "text/html" } });
+  if (!ssrResp.ok) {
+    throw new Error(`SSR fetch failed: ${ssrResp.status} ${ssrResp.statusText}`);
+  }
+  const ssrHtml = await ssrResp.text();
 
-  const browser = await chromium.launch();
-  const ctx = await browser.newContext();
-  const page = await ctx.newPage();
+  const browser = await puppeteer.launch({
+    executablePath: CHROMIUM_PATH,
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
+
+  // Inject the extractor into every page context (about:blank too).
+  await page.evaluateOnNewDocument(EXTRACTOR_SRC);
+
+  // Parse the SSR HTML inside a real browser context using DOMParser (Blink).
+  await page.goto("about:blank");
+  await page.evaluate(EXTRACTOR_SRC);
+  const ssrSnap = await page.evaluate((html) => {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    // eslint-disable-next-line no-undef
+    return __phonaraExtractPresenceSnapshot(doc);
+  }, ssrHtml);
+
+  // Now load the real page for CSR snapshot.
   await page.goto(URL_ARG, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForTimeout(FIRST_PAINT_WAIT_MS);
-  const csrSnap = await snapshotDom(page);
+  await new Promise((r) => setTimeout(r, FIRST_PAINT_WAIT_MS));
+  await page.evaluate(EXTRACTOR_SRC);
+  const csrSnap = await page.evaluate(() =>
+    // eslint-disable-next-line no-undef
+    __phonaraExtractPresenceSnapshot(document),
+  );
 
   // Begin mutation observation for the next 5s.
   await page.evaluate((bucketMs) => {
     const w = window;
     w.__phonaraAlive = { mutations: [], t0: performance.now(), bucketMs };
     const norm = (s) =>
-      (s ?? "")
+      (s == null ? "" : String(s))
         .normalize("NFKC")
         .replace(/[\u200B-\u200D\uFEFF]/g, "")
         .replace(/\s+/g, " ")
@@ -143,10 +180,13 @@ async function main() {
       const observer = new MutationObserver((records) => {
         const ts = performance.now() - w.__phonaraAlive.t0;
         for (const r of records) {
-          let before = "", after = "", field = "text";
+          let before = "",
+            after = "",
+            field = "text";
           if (r.type === "attributes" && r.attributeName === "data-value") {
             before = r.oldValue ?? "";
-            after = node.getAttribute("data-value") ?? "";
+            const target = r.target;
+            after = target.getAttribute("data-value") ?? "";
             field = "data-value";
           } else {
             const tn = node.querySelector("[data-presence-text]");
@@ -168,31 +208,30 @@ async function main() {
     });
   }, LOCKSTEP_BUCKET_MS);
 
-  await page.waitForTimeout(MUTATION_WINDOW_MS);
+  await new Promise((r) => setTimeout(r, MUTATION_WINDOW_MS));
 
   const mutations = await page.evaluate(() => window.__phonaraAlive.mutations);
 
-  // Truth Boundary: scan all visible presence text (CSR snapshot + mutation after-values).
+  // Truth Boundary
+  const truthRegex = new RegExp(TRUTH_REGEX_SRC, "i");
   const allText = [
     ...csrSnap.map((s) => `${s.text} ${s.dataValue ?? ""}`),
     ...mutations.map((m) => m.after || ""),
   ].join("\n");
-  const truthMatch = allText.match(TRUTH_REGEX);
-  const truthFail = truthMatch
-    ? { matched: truthMatch[0] }
-    : null;
+  const truthMatch = allText.match(truthRegex);
+  const truthFail = truthMatch ? { matched: truthMatch[0] } : null;
 
-  // Invariant 1
+  // Invariant 1 — First Impression
   const firstImpressionViolations = compareSnapshots(ssrSnap, csrSnap);
 
-  // Invariant 2
+  // Invariant 2 — Movement within 5s
   const movement = mutations.some(
     (m) =>
       (m.field === "data-value" && m.before !== m.after) ||
-      (m.kind === "global-pulse" && m.field === "text" && m.after && m.after.length > 0)
+      (m.kind === "global-pulse" && m.field === "text" && m.after && m.after.length > 0),
   );
 
-  // Invariant 3
+  // Invariant 3 — No Lockstep
   const buckets = new Map();
   for (const m of mutations) {
     const bucket = Math.floor(m.ts / LOCKSTEP_BUCKET_MS);
@@ -207,6 +246,7 @@ async function main() {
   const result = {
     url: URL_ARG,
     generatedAt: new Date().toISOString(),
+    chromium: CHROMIUM_PATH,
     ssrSnapshotCount: ssrSnap.length,
     csrSnapshotCount: csrSnap.length,
     invariants: {
@@ -227,6 +267,7 @@ async function main() {
         match: truthFail,
       },
     },
+    snapshots: { ssr: ssrSnap, csr: csrSnap },
     mutations,
   };
 
