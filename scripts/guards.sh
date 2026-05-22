@@ -89,6 +89,18 @@ check "no value-computation primitives in presence hook files" \
    | grep -v '// allow-source-call' \
    | grep -vE ':[[:space:]]*\\*'"
 
+# 9. PresenceSource purity — files under presence/sources/ MUST be pure
+#    data producers. They cannot import React, call React hooks, or talk
+#    to the scheduler directly. The single sanctioned React entry point
+#    is runtime/useSource.ts.
+#
+#    위반 시: "Source 파일은 React를 직접 import할 수 없습니다.
+#    runtime/useSource.ts를 통해 사용하세요."
+check "presence sources are React-free (purity contract)" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     -E \"(from ['\\\"]react['\\\"]|\\buse(State|Effect|Memo|Callback|Ref|LayoutEffect|SyncExternalStore)\\b|\\bsubscribeTick\\b)\" \
+     src/shared/lib/presence/sources"
+
 
 echo ""
 if [ "$fail" -eq 0 ]; then
