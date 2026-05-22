@@ -102,7 +102,8 @@ ko 기본 + 글로벌 도시명 자연스럽게 혼합(예: "Tokyo · 도쿄 지
 ### 규칙 (CI/README 명문화)
 - ❌ 개인 수익/출금/유저 이름 fake 금지 (`src/shared/lib/presence/RULES.md`)
 - ✅ aggregate count / region pulse / trend bias만 노출
-- ✅ kill switch `presence_engine_enabled`로 즉시 OFF 가능
+- ✅ 모든 카운터/티커는 `liveEngine` 경유 (정적 하드코딩 금지)
+- ✅ kill switch `presence_engine_enabled`, `presence_dynamic_updates_enabled`, `presence_update_intensity`로 즉시 OFF/조절
 - `scripts/guards.sh`에 fake earning 패턴 grep (`mockUser|fakeWithdrawal|fakeEarnings`) → exit 1
 
 ## 6. 라우트 셸 (8개)
