@@ -1,26 +1,13 @@
 {
   "url": "http://localhost:8080/",
-  "generatedAt": "2026-05-22T13:36:28.141Z",
+  "generatedAt": "2026-05-22T13:37:32.503Z",
   "chromium": "/bin/chromium",
   "ssrSnapshotCount": 5,
   "csrSnapshotCount": 5,
   "invariants": {
     "firstImpression": {
-      "pass": false,
-      "violations": [
-        {
-          "key": "global-pulse#0",
-          "reason": "data-value mismatch",
-          "ssr": "steady",
-          "csr": "global_surge"
-        },
-        {
-          "key": "global-pulse#0",
-          "reason": "presence text mismatch",
-          "ssr": "STEADY",
-          "csr": "GLOBAL SURGE"
-        }
-      ]
+      "pass": true,
+      "violations": []
     },
     "movementWithin5s": {
       "pass": true,
@@ -32,7 +19,7 @@
         {
           "bucket": 2,
           "kinds": [
-            "ticker",
+            "global-pulse",
             "region-heat"
           ]
         }
@@ -86,8 +73,8 @@
         "index": 0,
         "occurrence": 0,
         "kind": "global-pulse",
-        "dataValue": "global_surge",
-        "text": "GLOBAL SURGE"
+        "dataValue": "steady",
+        "text": "STEADY"
       },
       {
         "index": 1,
@@ -121,161 +108,161 @@
   },
   "mutations": [
     {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
+      "ts": 1144.1999999999534,
+      "kind": "global-pulse",
       "field": "text",
       "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
+      "after": "GLOBAL SURGE"
     },
     {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
+      "ts": 1144.1999999999534,
+      "kind": "global-pulse",
+      "field": "data-value",
+      "before": "steady",
+      "after": "global_surge"
     },
     {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 938.9000000000233,
-      "kind": "ticker",
-      "field": "text",
-      "before": "",
-      "after": "Seoul · 서울 지금 활발해요 🔥"
-    },
-    {
-      "ts": 956.3000000000466,
+      "ts": 1185.5999999999767,
       "kind": "region-heat",
       "field": "text",
       "before": "",
       "after": "Seoul · 서울"
     },
     {
-      "ts": 956.3000000000466,
+      "ts": 1185.5999999999767,
       "kind": "region-heat",
       "field": "text",
       "before": "",
       "after": "Seoul · 서울"
     },
     {
-      "ts": 956.3000000000466,
+      "ts": 1185.5999999999767,
       "kind": "region-heat",
       "field": "data-value",
       "before": "berlin",
       "after": "seoul"
     },
     {
-      "ts": 4425,
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 1425.5999999999767,
+      "kind": "ticker",
+      "field": "text",
+      "before": "",
+      "after": "Seoul · 서울 지금 활발해요 🔥"
+    },
+    {
+      "ts": 4744.300000000047,
       "kind": "onboarding-counter",
       "field": "data-value",
       "before": "12431",
       "after": "12430"
     },
     {
-      "ts": 4425,
-      "kind": "onboarding-counter",
-      "field": "text",
-      "before": "",
-      "after": "명지금 참여 중"
-    },
-    {
-      "ts": 4591.599999999977,
-      "kind": "onboarding-counter",
-      "field": "data-value",
-      "before": "12430",
-      "after": "12429"
-    },
-    {
-      "ts": 4591.599999999977,
+      "ts": 4744.300000000047,
       "kind": "onboarding-counter",
       "field": "text",
       "before": "",
