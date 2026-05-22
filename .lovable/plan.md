@@ -225,7 +225,9 @@ src/features/.gitkeep
 - [ ] `prefers-reduced-motion` ON → ticker/marquee/confetti 스킵
 - [ ] WorldwideTicker가 region rotate (Seoul/Tokyo/NY 등) 동작
 - [ ] GlobalPulseChip이 시간대별 상태 변경 (Asia prime/NA evening)
-- [ ] LiveOnboardingCounter aggregate 카운트업(tabular-nums)
+- [ ] LiveOnboardingCounter aggregate 카운트업(tabular-nums), 2~8초 자연 변동, 동시 변경 없음
+- [ ] hidden tab → presence 업데이트 일시정지(CPU 급감), 재개 시 부드럽게 복귀
+- [ ] reduced-motion → count easing 제거, 즉시 점프만
 - [ ] presence RULES.md 존재 + guards.sh fake earning grep 통과
 - [ ] iOS Safari 키보드 input 가림 0
 - [ ] `useNotifications` 더미에서 unread/realtime 동작
