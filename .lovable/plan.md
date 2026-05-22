@@ -1,164 +1,75 @@
-# PR-1 Step 2 — 최종 확정안 (Build Mode 직전)
+# P1-3 + P1-4 최종 실행 카드 (Grok 2 수정 반영)
 
-**단일 초점**: presence hook이 직접 값을 계산하지 않고, 좁은 `PresenceSource` 인터페이스에서만 값을 받는다. 그 활동량은 in-memory telemetry로 관찰 가능하다.
+## 반영된 수정
 
-원칙: UI 시그니처 불변 · UI 컴포넌트 수정 0 · 모든 주장은 측정으로 증명 · 1 PR로 리뷰/롤백 가능.
-
----
-
-## 1. 신규/수정 파일 확정 (신규 6, 수정 5)
-
-### 신규
-1. `src/shared/lib/presence/sources/types.ts`
-2. `src/shared/lib/presence/sources/heatRegionSource.ts`
-3. `src/shared/lib/presence/sources/liveCounterSource.ts`
-4. `src/shared/lib/presence/runtime/useSource.ts`
-5. `src/shared/lib/presence/runtime/telemetry.ts`
-6. `tests/presence/sources.test.ts`
-
-### 수정
-- `src/shared/lib/presence/waveEngine.ts` — `useActiveRegions`를 `useSource(heatRegionSource(...), ...)` 위임으로 교체. `getDeterministicRegions` / `regionHeat` / 상수들은 **export 유지** (source 파일이 import).
-- `src/shared/lib/presence/liveEngine.ts` — `useLiveCounter`를 `useSource(liveCounterSource(seed, opts), ...)` 위임으로 교체.
-- `src/shared/lib/presence/useGlobalPulse.ts` — 파일 내 inline source 객체(`{ key:"global-pulse", firstPaint, sample, minIntervalMs }`) + `useSource` 위임.
-- `src/shared/lib/presence/runtime/scheduler.ts` — `loop()`에서 tick 1회당 `recordTick(performance.now() - start)` 1줄.
-- `scripts/guards.sh` — 가드 #8 추가.
-- (문서) `docs/presence/ALIVENESS.md` §Source 1문단 추가.
-
-UI 컴포넌트 수정: **0**. 시각적 출력 변화: **0**.
+1. **라우트 적용 분할**: Group 1 (`trade`, `slots`, `play-free`, `wallet`) 먼저 적용. Group 2·3은 P1-4b로 분리하여 별도 실행 (Grok 추후 지시).
+2. **자연스러움 우선**: glow는 `--shadow-presence-soft` 정도만 사용, `--shadow-presence-hot`은 P1-4b에서 hero hot-spot에만 한정. Motion은 `--motion-tick`/`--motion-pulse` 기본, 새 keyframe 추가 0.
 
 ---
 
-## 2. 핵심 계약
+## A. P1-3 — Primitives 5개 (`src/shared/ui/presence/primitives/`)
 
-### `PresenceSource<T>`
-```ts
-export interface PresenceSource<T> {
-  readonly key: string;             // telemetry/디버깅 id (kebab-case)
-  firstPaint(): T;                  // SSR + CSR 첫 1초 동일값. pure.
-  sample(now: number, prev: T): T;  // 변화 없으면 prev 그대로 반환 (참조 동일성 유지)
-  readonly minIntervalMs: number;   // 다음 sample 호출 최소 간격
-}
-```
+| 파일 | Source / hook | data-presence | 자연스러움 규칙 |
+|---|---|---|---|
+| `LiveValue.tsx` | `useLiveCounter` | `live-value` | tabular-nums, `transition: color var(--motion-tick)` 1줄, glow 없음 |
+| `LiveDot.tsx` | `onlineDotSource` via `useSource` | `online-dot` | 기존 `.phonara-pulse` 재사용, soft glow만 |
+| `LiveBadge.tsx` | `rewardWaveSource` via `useSource` | `reward-wave` | level chip만, intensity는 opacity 미세 변화 |
+| `LiveTicker.tsx` | `tickerSource` via `useSource` | `ticker` | crossfade `--ease-presence-soft`, slide/marquee 사용 안 함 |
+| `LiveHeatCell.tsx` | `worldActivityHeatSource` via `useSource` | `heat-cell` | heat → background opacity 매핑, glow 없음 |
 
-### `useSource<T>(source, opts)`
-- `subscribeTick` 1회 구독.
-- 첫 paint 값 = `source.firstPaint()` (useMemo, deps: source.key).
-- `nextAt = mountedAt + max(PRESENCE_QUIET_WINDOW_MS, opts.firstLiveDelayMs ?? PRESENCE_FIRST_LIVE_DELAY_MS) + (opts.jitterKey ? presenceLockstepJitter(opts.jitterKey) : 0)`.
-- tick 콜백:
-  - `now < nextAt` → return.
-  - `next = source.sample(now, prev)`.
-  - `next !== prev` → `setState(next)` + `recordMutation(source.key)`.
-  - `nextAt = now + source.minIntervalMs`.
-- SSR/no-window 가드 동일.
-- ease/내부 상태는 **source가 클로저로 보유**(useSource는 불가지).
+- 모두 SSR-safe, hex/rgb 0
+- React 진입은 `useSource`/`useLiveCounter`만 (Guard #9 통과)
+- 기존 9개 Composition **0 수정**
 
-### `telemetry.ts` (PROD에서도 무해)
-- `tickRing: Float32Array(256)` + `tickRingIdx: number`.
-- `mutationsByKey: Map<string, number>`.
-- API: `recordTick(d: number)`, `recordMutation(key: string)`, `getTelemetrySnapshot(): { tickAvgMs, tickMaxMs, tickCount, mutations: Record<string, number> }`, `__resetTelemetry()` (테스트 전용).
-- allocation: tick 경로 0, mutation 경로 0(Map.set만). console 출력 0.
+테스트: `tests/presence/primitives.test.ts` (5 케이스 — SSR-safe render + `data-presence` 속성)
 
 ---
 
-## 3. Source 구현 명세 (회귀 방지용)
+## B. P1-4a — Group 1 라우트 적용 (4개)
 
-### `heatRegionSource(count, seed)`
-- `key`: `"region-heat"`.
-- `firstPaint`: `getDeterministicRegions(count, seed)` 그대로.
-- `sample(now, prev)`: heat 정렬한 결과를 반환. **prev와 region.id 시퀀스가 동일하면 prev 반환**(참조 동일성으로 setState 0회 보장).
-- `minIntervalMs`: 45_000 (기존 REFRESH_MS 유지).
+각 라우트의 placeholder 영역에 Primitive 추가만. 기존 마크업/Composition 미변경.
 
-### `liveCounterSource(seed, opts)`
-- `key`: `"live-counter"` (옵션의 `category`로 suffix 가능: `"live-counter:onboarding"`).
-- 내부 상태(클로저): `target`, `from`, `easeStart`, `nextTickAt`, `nextWaveAt`, `current`(display).
-- `firstPaint`: `seed`.
-- `sample(now, prev)`:
-  - ease 진행 → `current` 업데이트.
-  - `now >= nextTickAt` → 작은 delta 적용 + `nextTickAt` 재계산.
-  - `now >= nextWaveAt` → 큰 delta 적용 + `nextWaveAt` 재계산.
-  - 반환: `current === prev ? prev : current`.
-- `minIntervalMs`: `0` (ease 부드러움을 위해 매 rAF tick 허용). 실제 delta 발생은 내부 nextTickAt 게이트로 제한.
-- intensity/category/lowEnd/quiet window 처리는 source 내부.
+| 라우트 | 추가 Primitive | 위치 |
+|---|---|---|
+| `trade` | `LiveTicker` + `LiveDot` | placeholder 위 hero strip |
+| `slots` | `LiveBadge` + `LiveValue`(seed 12_840) | placeholder 위 hero strip |
+| `play-free` | `LiveBadge` 1개 | 기존 `LiveOnboardingCounter` 옆 |
+| `wallet` | `LiveDot` + 작은 `LiveValue`(aggregate 활동량) | 잔고 카드 아래 strip |
 
-### `useGlobalPulse` inline source
-- `key`: `"global-pulse"`.
-- `firstPaint`: `GLOBAL_PULSE_FIRST_PAINT`.
-- `sample`: `computePulse()` 호출, 동일 결과면 prev 반환.
-- `minIntervalMs`: `PULSE_REFRESH_MS` (60_000).
+Group 2 (`missions`, `account`) / Group 3 (`index`, `refer`)는 본 카드에서 제외. P1-4b 카드로 별도 진행.
 
 ---
 
-## 4. 가드 #8 (신규)
+## C. 변경 파일 (신규 6 / 수정 4)
 
-`scripts/guards.sh`:
-```bash
-check "no Math.random/Date.now/hourInTz in presence hook files" \
-  "grep -RIn --include='*.ts' \
-     -E '\\b(Math\\.random|Date\\.now|hourInTz)\\b' \
-     src/shared/lib/presence/useGlobalPulse.ts \
-     src/shared/lib/presence/liveEngine.ts \
-     src/shared/lib/presence/waveEngine.ts \
-   | grep -v 'sources/' \
-   | grep -v '// allow-source-call'"
-```
-- 적용 대상: 3 hook 파일에 한정. source 파일/유틸은 자유.
-- 의미: 데이터 계산이 source 밖으로 새지 않음을 보장.
+**신규**
+1. `src/shared/ui/presence/primitives/LiveValue.tsx`
+2. `src/shared/ui/presence/primitives/LiveDot.tsx`
+3. `src/shared/ui/presence/primitives/LiveBadge.tsx`
+4. `src/shared/ui/presence/primitives/LiveTicker.tsx`
+5. `src/shared/ui/presence/primitives/LiveHeatCell.tsx`
+6. `tests/presence/primitives.test.ts`
+
+**수정**: `src/routes/{trade,slots,play-free,wallet}.tsx`
+
+기존 Composition 0 수정. 시각 회귀 위험 최소.
 
 ---
 
-## 5. 테스트 — `tests/presence/sources.test.ts` 5 케이스
+## D. 검증
 
-1. **heatRegionSource.firstPaint** 100회 호출 → 모두 같은 region.id 시퀀스.
-2. **liveCounterSource.firstPaint** = seed 정수, 100회 호출 결정적.
-3. **sample minInterval gate**: `useSource`에 fake source(`minIntervalMs=1000`) + fake tick 시퀀스 — 1000ms 미만 호출에서 sample 미호출(spy).
-4. **참조 동일성**: source.sample이 prev 반환 → useSource state setter 미호출(react-hooks-testing-library 또는 수동 mock으로 검증).
-5. **telemetry**: `recordTick` 300회 → ring wrap, `getTelemetrySnapshot().tickCount === 300`, `tickAvgMs`/`tickMaxMs` 정확. `recordMutation("x")` 2회, `recordMutation("y")` 1회 → mutations 정확.
-
-기존 `scheduler.test.ts` 3 케이스는 그대로 통과해야 함.
+- `bunx vitest run` → 37 + 5 = **42 케이스 green** 목표
+- `scripts/guards.sh` → **9/9 PASS** (Guard #9 신규 Primitive React import 검사 면제 — primitives는 UI 레이어)
+- Aliveness 영향: 1·4 invariant 자동 PASS(추가만), 2 강화, 3은 jitterKey 자동 분배로 유지
 
 ---
 
-## 6. 완료 기준 (5개, 한 줄 검증)
+## E. 완료 후 보고 (Grok 요청 중점)
 
-1. **Hook 슬림화**: 3 hook 파일 본문 각 ≤ 15줄, 시간/heat/난수 계산 0줄.
-2. **Source 단일 진입점**: `grep -E "Math\.random|Date\.now|hourInTz" src/shared/lib/presence/{useGlobalPulse,liveEngine,waveEngine}.ts` → 0건 (가드 #8 PASS).
-3. **시그니처/Invariant 무회귀**: aliveness 4 invariant 재PASS + UI 컴포넌트 git diff 0.
-4. **Telemetry 동작**: sources.test의 telemetry 케이스 green.
-5. **전체 가드 + vitest green**: guards #1–#8 PASS, 모든 vitest 케이스 PASS.
+1. 5 Primitive + Source 매핑 표
+2. Group 1 4개 라우트 적용 내용
+3. vitest 결과 + Guard 9/9
+4. 라우트별 aliveness 영향도 요약
+5. **P1 전체 마무리 의견 + P2 진행 방향 제안** (Reward Loop Core 큰 그림)
 
----
-
-## 7. 위험 / 대응 (Step 2 한정)
-
-| 위험 | 대응 |
-|---|---|
-| Source 추출 중 mutation 패턴 변형 | aliveness-check `mutations` 배열을 before/after 저장 → kind별 (count, 평균 간격) 비교, ±20% 이내면 PASS, 초과 시 source 로직 재확인 |
-| `useSource`가 3 hook의 서로 다른 quiet/jitter/ease 요구를 흡수 못 함 | quiet/jitter는 useSource가 흡수, ease는 source 내부. 인터페이스 단순 유지 |
-| `liveCounterSource`의 `minIntervalMs=0`가 telemetry mutation count를 부풀림 | source는 내부 nextTickAt 게이트로 실제 delta 발생만 prev≠next로 반환. ease 중간값은 prev 반환 처리(또는 mutation 1회만 count). 테스트로 회귀 차단 |
-| Telemetry 오버헤드가 longtask 유발 | tick 경로 allocation 0, Map.set 1회. Step 3 baseline에서 실측 확인(이번 단계는 코드 수준 검증) |
-| 가드 #8 false positive | 대상 3 파일에 한정 + `// allow-source-call` escape hatch + `sources/` grep 제외 |
-
----
-
-## 8. 실행 순서 (Build Mode 승인 직후)
-
-1. `sources/types.ts` 작성.
-2. `sources/heatRegionSource.ts`, `sources/liveCounterSource.ts` 작성.
-3. `tests/presence/sources.test.ts` 작성 (source 케이스 1–4) → vitest green.
-4. `runtime/useSource.ts` 작성.
-5. **aliveness-check 실행 → `ALIVENESS_RUN_BEFORE_STEP2.json` 저장**.
-6. `waveEngine.ts`, `liveEngine.ts`, `useGlobalPulse.ts`를 useSource 위임으로 교체.
-7. `runtime/telemetry.ts` 작성, `scheduler.ts`/`useSource.ts`에 1줄씩 연동.
-8. sources.test에 telemetry 케이스 5 추가 → vitest green.
-9. `guards.sh` 가드 #8 추가, `ALIVENESS.md` §Source 1문단 추가.
-10. **aliveness-check 재실행 → `ALIVENESS_RUN_AFTER_STEP2.json` 저장**, mutation 패턴 diff 확인.
-11. 전체 가드 + vitest 최종 실행.
-12. 완료 보고:
-    - HEAD SHA + 변경 파일 목록
-    - 5 완료 기준 체크박스
-    - aliveness before/after 4 invariant 결과 + mutation 패턴 diff
-    - vitest 결과 raw
-
----
-
-이대로 Build Mode 전환을 진행하면 됩니다. 승인 부탁드립니다.
+승인 즉시 1회에 실행.
