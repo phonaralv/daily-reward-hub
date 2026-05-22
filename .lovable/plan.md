@@ -246,3 +246,17 @@ src/features/.gitkeep
 3. 마이그레이션 01~07 SQL 작성 → 외부 Supabase 적용 가이드 출력
 4. 빌드 + gzip 측정 + 가드 스크립트 실행
 5. PR-2 plan은 다음 턴에 별도 제시
+
+---
+
+## Execution Rules (Foundation-Only)
+
+우선순위: **stable architecture → clean compile → mobile-safe UX → PWA safety → CI guards → reusable infra**.
+
+- ❌ UI 비주얼 과설계 금지, 토큰 과소비 금지, 비즈니스 로직 금지
+- ✅ presence UI는 lightweight 스켈레톤 + liveEngine 훅만 — 화려한 맵/장식 효과는 PR-2/PR-3로 deferred
+- ✅ `WorldActivityMapPlaceholder`는 정적 SVG dot mask 1장 (애니메이션 1개 이하)
+- ✅ `RewardWaveBanner`/`TrendingMissionPulse`는 텍스트 rotate + 단일 pulse dot만
+- ✅ 모든 생성 코드는 컴파일 성공해야 완료 — 미사용 import 0, 타입 에러 0
+- ✅ 토큰 위험 시: 인프라(클라이언트/미들웨어/마이그레이션/가드) > 라우트 셸 > presence UI > 시각 디테일 순으로 우선
+
