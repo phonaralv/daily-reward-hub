@@ -95,16 +95,65 @@ PR-1의 정체성은 “Presence가 살아있다”이다.
 
 ## 0-D. Aliveness 자동 체크 (실측 기반)
 
-`scripts/aliveness-check.mjs` 신설. CI에서 PR마다 돌릴 수 있게 한다.
+`scripts/aliveness-check.mjs` 신설. Playwright(Chromium headless)로 preview URL을 연다.
 
-검증 항목 — 0-A의 4 invariant를 직접 측정:
-- **First Impression Invariant**: SSR HTML 스냅샷의 presence 문자열 vs 마운트 후 1초 시점 DOM 비교. 다르면 fail.
-- **Movement Within 5 Seconds**: 5초간 DOM mutation 관찰. presence 영역에 의미 있는 텍스트 변화 0건이면 fail.
-- **No Lockstep**: mutation 타임라인을 400ms 버킷으로 묶어 동시 갱신 수가 2 이상인 버킷이 있으면 fail.
-- **Truth Boundary**: presence 영역 텍스트에 금지 패턴 매칭되면 fail (정규식은 0-A에 명시).
+### Presence 영역의 정의 (추출 대상)
 
-이로써 “Presence가 살아있다”가 코드로 검증 가능해진다.
-1단계부터는 이 스크립트가 회귀 방지선 역할을 한다.
+“presence 영역”은 자유 추정이 아니라 명시적으로 표시된 DOM만 본다.
+
+- 모든 presence 컴포넌트의 루트에 `data-presence` 속성을 부여한다.
+  값은 manifest kind: `online-count`, `countries`, `region-heat`,
+  `global-pulse`, `ticker`, `onboarding-counter`.
+  (0단계 코드 작업의 일부. build 모드에서 적용.)
+- 숫자 변화만 정확히 잡기 위해 카운터 정수부는 `data-numeric` + `data-value`
+  속성으로 노출 (`data-value`는 raw integer).
+- ticker/region 텍스트는 `data-presence-text` 영역 안의
+  텍스트 노드만 추출(아이콘/이모지 제외 위해 `:not([aria-hidden=true])`).
+
+스크립트 동작:
+
+1. `fetch(URL)`로 SSR HTML을 받아 `data-presence` 가진 노드의 텍스트와
+   `data-value`를 **SSR snapshot**으로 저장.
+2. Playwright로 같은 URL을 열고, `domcontentloaded` 직후 + 1000ms 시점에
+   동일 셀렉터의 텍스트/`data-value`를 **CSR snapshot**으로 저장.
+3. 그 후 5000ms 동안 `MutationObserver`를 page 컨텍스트에서 돌려
+   `[data-presence] *` 의 텍스트/`data-value` 변화 이벤트를
+   `{ts, kind, before, after}`로 수집해 반환받는다.
+
+### Invariant 판정
+
+- **First Impression Invariant**
+  SSR snapshot vs CSR snapshot(1000ms 시점) 비교.
+  `data-presence` 노드별로 `data-value`가 다르면 fail,
+  `data-presence-text` 영역 텍스트가 다르면 fail.
+  (이모지/공백/아이콘 차이는 무시: 비교 전에 `String.normalize("NFKC")` +
+  `\s+ → " "` + zero-width 제거.)
+
+- **Movement Within 5 Seconds**
+  5초 mutation 로그에서 `data-value` 변화가 manifest의 floor step 이상인
+  이벤트가 1건 이상, 또는 `global-pulse` 라벨이 다른 단계로 바뀐 이벤트가
+  1건 이상이면 pass. 아니면 fail.
+
+- **No Lockstep**
+  mutation 로그 타임스탬프를 400ms 버킷으로 묶고, 한 버킷에 서로 다른
+  `data-presence` kind가 2개 이상 변경되면 fail. 같은 kind 내부 다중 갱신은
+  허용(단일 카운터의 ease step일 수 있음).
+
+- **Truth Boundary**
+  CSR snapshot + mutation 로그의 모든 텍스트를 합쳐 금지 정규식 검사.
+  정규식은 0-A에 명시한 패턴을 그대로 사용:
+  `\busername\b|\bwithdrew\b|\bwithdrawal\b|earned\s*[$₩]|profit\s*[$₩]|\bKRW\s*\d|\bUSD\s*\d`.
+  매칭 시 fail + 매칭 노드의 `data-presence` 값 출력.
+
+### 출력
+
+`docs/presence/ALIVENESS_RUN.json`에 invariant별 pass/fail, 위반 노드,
+mutation 타임라인을 저장. 0단계 종료 보고에 함께 첨부.
+
+이로써 “Presence가 살아있다”가 코드로 검증 가능해지고,
+1단계부터는 이 스크립트가 회귀 방지선이 된다.
+
+
 
 ## 0단계 종료 조건 (이게 통과해야 1단계 플랜을 낸다)
 
