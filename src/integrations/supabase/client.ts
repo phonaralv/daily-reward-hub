@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+
+// Placeholder Database type. Replace in PR-2 via supabase gen types typescript.
+type Database = Record<string, never>;
 
 // External Supabase ref: edlhlbwojgdnpdjhorpb
 // URL is publishable. Anon key must be provided via VITE_SUPABASE_ANON_KEY
