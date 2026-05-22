@@ -78,6 +78,16 @@ check "presence UI does not import scheduler directly" \
      --exclude-dir=node_modules \
      -E \"from ['\\\"][^'\\\"]*presence/runtime/scheduler\" src/shared/ui"
 
+# 8. No direct value computation (Math.random / Date.now / hourInTz) inside
+#    presence hook files — all derivation must live in a PresenceSource.
+check "no value-computation primitives in presence hook files" \
+  "grep -RIn --include='*.ts' \
+     -E '\\b(Math\\.random|Date\\.now|hourInTz)\\b' \
+     src/shared/lib/presence/useGlobalPulse.ts \
+     src/shared/lib/presence/liveEngine.ts \
+     src/shared/lib/presence/waveEngine.ts \
+   | grep -v '// allow-source-call'"
+
 
 echo ""
 if [ "$fail" -eq 0 ]; then
