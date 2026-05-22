@@ -84,4 +84,131 @@ describe("presence/sources", () => {
     expect(snap.tickAvgMs).toBeLessThanOrEqual(10);
     expect(snap.mutations).toEqual({ x: 2, y: 1 });
   });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // PR-2 Step 1 — Source contract regression tests
+  //
+  // Contracts under test:
+  //  (1) sample(now, prev) MUST return `prev` by reference identity when
+  //      nothing has meaningfully changed. This is the single most load-
+  //      bearing invariant in the Presence runtime: useSource depends on
+  //      it to skip React state updates and to avoid recording spurious
+  //      mutations in telemetry. A regression here causes silent perf
+  //      damage with no test failure elsewhere.
+  //  (2) firstPaint() is deterministic — same input, same output on every
+  //      call. SSR and the first 1000ms of CSR rely on this.
+  //  (3) minIntervalMs is the declared driver gate. The contract value
+  //      must match the documented behaviour of each source.
+  //  (4) Source-specific guarantees:
+  //       - heatRegionSource: identical region.id sequence → same ref
+  //       - liveCounterSource: during ease, `current` advances monotonically
+  // ─────────────────────────────────────────────────────────────────────
+
+  describe("contract (1) — sample returns prev by REFERENCE when unchanged", () => {
+    it("heatRegionSource: 20 consecutive samples with stable heat ordering all return prev by reference", () => {
+      const src = heatRegionSource(4);
+      // Establish a stable "prev" by taking one real sample first. After
+      // this, the regions are sorted by current heat; subsequent samples
+      // within the same wall-clock window will produce the same id
+      // sequence and MUST therefore return `prev` by reference.
+      const seed = src.sample(0, src.firstPaint());
+      for (let i = 0; i < 20; i++) {
+        const next = src.sample(i, seed);
+        // Object.is reference equality — NOT deep equality.
+        expect(next).toBe(seed);
+      }
+    });
+
+    it("liveCounterSource: 20 consecutive samples without a delta firing all return prev by reference", () => {
+      // Push tick/wave intervals far into the future so no delta fires
+      // during the test window. `current` stays at seed → sample returns
+      // `prev` (identity for primitives).
+      const src = liveCounterSource(100, {
+        easeMs: 0,
+        intervalMs: [1_000_000, 1_000_000],
+        waveMs: [1_000_000, 1_000_000],
+      });
+      const seed = src.sample(0, 100);
+      expect(seed).toBe(100);
+      for (let i = 0; i < 20; i++) {
+        const next = src.sample(i, 100);
+        expect(next).toBe(100);
+      }
+    });
+  });
+
+  describe("contract (2) — firstPaint is deterministic", () => {
+    it("heatRegionSource.firstPaint returns the same id sequence on repeated calls", () => {
+      const src = heatRegionSource(4);
+      const a = src.firstPaint().map((r) => r.id);
+      const b = src.firstPaint().map((r) => r.id);
+      expect(b).toEqual(a);
+    });
+
+    it("liveCounterSource.firstPaint returns the seed on repeated calls", () => {
+      const src = liveCounterSource(777, { easeMs: 0 });
+      expect(src.firstPaint()).toBe(777);
+      expect(src.firstPaint()).toBe(777);
+    });
+  });
+
+  describe("contract (3) — minIntervalMs declares the documented driver gate", () => {
+    it("heatRegionSource declares the 45s refresh gate", () => {
+      expect(heatRegionSource(4).minIntervalMs).toBe(45_000);
+    });
+
+    it("liveCounterSource declares minIntervalMs=0 (per-frame ease, internal cadence gates)", () => {
+      expect(liveCounterSource(0).minIntervalMs).toBe(0);
+    });
+  });
+
+  describe("contract (4) — source-specific guarantees", () => {
+    it("heatRegionSource: identical region.id sequence yields the same reference", () => {
+      const src = heatRegionSource(4);
+      const a = src.sample(0, src.firstPaint());
+      const b = src.sample(1, a);
+      // When the heat-sorted ids match `prev`, the source returns `prev`
+      // verbatim — by reference, not a fresh array of equal regions.
+      expect(b).toBe(a);
+    });
+
+    it("liveCounterSource: during ease, `current` advances monotonically toward target", () => {
+      // Deterministic random → predictable delta magnitude and sign.
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+
+      // Tight tick cadence (~1ms + offset) and ease over 600ms keeps the
+      // counter continuously interpolating upward. Disable decreases and
+      // push waves out of range so only positive deltas occur.
+      const src = liveCounterSource(0, {
+        easeMs: 600,
+        intervalMs: [1, 1],
+        waveMs: [1_000_000, 1_000_000],
+        allowDecrease: false,
+        minDelta: 4,
+        maxDelta: 4,
+      });
+
+      // Start well past the quiet window so mount-time earliestDelta does
+      // not push the first tick further than our sampling range.
+      const base = 10_000;
+      const values: number[] = [];
+      let prev = 0;
+      for (let t = base; t <= base + 3000; t += 50) {
+        const v = src.sample(t, prev);
+        values.push(v);
+        prev = v;
+      }
+
+      // At least one delta must have fired.
+      const firstChange = values.findIndex((v) => v > 0);
+      expect(firstChange).toBeGreaterThan(-1);
+
+      // From the first non-zero value onward, the counter must be
+      // non-decreasing (ease is a 1 - (1-p)^3 curve toward a higher
+      // target, with subsequent positive deltas only).
+      for (let i = firstChange + 1; i < values.length; i++) {
+        expect(values[i]).toBeGreaterThanOrEqual(values[i - 1]);
+      }
+    });
+  });
 });
