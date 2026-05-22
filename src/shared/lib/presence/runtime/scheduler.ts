@@ -11,7 +11,11 @@
  *
  * 이 모듈은 PR-1의 기반이며, 30년 후에도 유지보수 가능한 수준으로 설계됨.
  */
-import { recordTick } from "./telemetry";
+import {
+  recordTick,
+  getTelemetrySnapshot,
+  __resetTelemetry,
+} from "./telemetry";
 
 export type PresenceTick = (now: number) => void;
 
@@ -122,5 +126,36 @@ if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     ticks.clear();
     teardown();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dev-only telemetry inspection hook.
+//
+// In development, expose a read-only handle on `window.__presenceTelemetry`
+// so engineers can inspect rAF cost and per-source mutation counts directly
+// from DevTools without shipping any UI:
+//
+//   window.__presenceTelemetry.snapshot()
+//   window.__presenceTelemetry.reset()
+//
+// Guarded by BOTH `typeof window !== 'undefined'` (SSR / Workerd safety)
+// AND `import.meta.env.DEV` (never present in production bundles, so
+// production cannot be reverse-engineered via this surface). The handle
+// is `Object.freeze`d to prevent accidental method swapping.
+// ─────────────────────────────────────────────────────────────────────────
+declare global {
+  interface Window {
+    __presenceTelemetry?: {
+      snapshot: typeof getTelemetrySnapshot;
+      reset: typeof __resetTelemetry;
+    };
+  }
+}
+
+if (typeof window !== "undefined" && import.meta.env?.DEV) {
+  window.__presenceTelemetry = Object.freeze({
+    snapshot: getTelemetrySnapshot,
+    reset: __resetTelemetry,
   });
 }
