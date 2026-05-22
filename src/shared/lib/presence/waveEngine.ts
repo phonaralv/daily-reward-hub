@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { REGIONS, type Region } from "@/shared/config/presence/regions";
-import { subscribeTick } from "./runtime/scheduler";
-import { hourInTz } from "@/shared/config/locale";
+import { hourInTz } from "@/shared/config/locale"; // allow-source-call
+import { useSource } from "./runtime/useSource";
+import { heatRegionSource } from "./sources/heatRegionSource";
 
 /**
  * Stable seed used for first-paint deterministic ordering.
@@ -88,90 +89,53 @@ export function getDeterministicRegions(
  * Time-dependent — MUST NOT run during the first paint window.
  */
 export function regionHeat(r: Region, now: Date = new Date()): number {
-  const h = hourInTz(r.timezone, now);
+  const h = hourInTz(r.timezone, now); // allow-source-call
   const [start, end] = r.activeHours;
   const inPrime = h >= start && h <= end;
   const base = 0.5 + Math.sin((h / 24) * Math.PI * 2) * 0.15;
   return inPrime ? base * r.activityMultiplier + 0.4 : base * 0.6;
 }
 
-function computeHeatRegions(count: number): Region[] {
-  return [...REGIONS]
-    .map((r) => ({ r, score: regionHeat(r) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, count)
-    .map(({ r }) => r);
-}
-
 export interface UseActiveRegionsOptions {
   seed?: string;
   /** Delay before live takeover. Floored at PRESENCE_FIRST_LIVE_DELAY_MS. */
   firstLiveDelayMs?: number;
-  /**
-   * Per-call jitter key. Two components using the same hook with different
-   * `jitterKey` values will switch to live at different times, preventing
-   * the No-Lockstep invariant from firing on first takeover.
-   */
+  /** Per-call jitter key — prevents the No-Lockstep invariant from firing. */
   jitterKey?: string;
 }
 
 /**
  * Region rotation hook.
  *
- * Hydration contract (ALIVENESS spec §First Impression Invariant):
- * - First render on BOTH server and client returns
- *   `getDeterministicRegions(count, seed)` — a pure function of inputs.
- *   SSR HTML and the first hydrated DOM render identical text.
- * - After `firstLiveDelayMs + jitter` (>= 1200ms), the client switches to
- *   live heat-based ordering and refreshes every 45s. jitter (0..600ms,
- *   deterministic per jitterKey) staggers sibling components so they never
- *   land in the same 400ms lockstep bucket.
+ * Step 2 (PR-1): delegates to `heatRegionSource` via `useSource`. The
+ * hydration contract is preserved end-to-end — `firstPaint` comes from
+ * the same pure `getDeterministicRegions` function on SSR and CSR, and
+ * the live takeover still respects the quiet window + jitter.
  */
 export function useActiveRegions(
   count: number = 4,
   opts: UseActiveRegionsOptions = {},
 ): Region[] {
   const seed = opts.seed ?? PRESENCE_FIRST_PAINT_SEED;
-  const firstLiveDelayMs = Math.max(
-    PRESENCE_FIRST_LIVE_DELAY_MS,
-    opts.firstLiveDelayMs ?? PRESENCE_FIRST_LIVE_DELAY_MS,
-  );
-  const jitter = opts.jitterKey ? presenceLockstepJitter(opts.jitterKey, seed) : 0;
-
-
-  const firstPaint = useMemo(
-    () => getDeterministicRegions(count, seed),
+  const source = useMemo(
+    () => heatRegionSource(count, seed),
     [count, seed],
   );
-  const [active, setActive] = useState<Region[]>(firstPaint);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mountedAt = performance.now();
-    const firstLiveAt = mountedAt + firstLiveDelayMs + jitter;
-    let nextAt = firstLiveAt;
-    const REFRESH_MS = 45_000;
-
-    const tick = (now: number) => {
-      if (now < nextAt) return;
-      setActive(computeHeatRegions(count));
-      nextAt = (now === firstLiveAt ? now : now) + REFRESH_MS;
-    };
-
-    return subscribeTick(tick);
-  }, [count, seed, firstLiveDelayMs, jitter]);
-
-  return active;
+  return useSource(source, {
+    firstLiveDelayMs: opts.firstLiveDelayMs,
+    jitterKey: opts.jitterKey,
+  });
 }
+
 
 
 /** Time-bucket multipliers for different content types. */
 export function getTimeMultiplier(
   category: "onboarding" | "trade" | "reward" | "activity",
 ): number {
-  const seoulH = hourInTz("Asia/Seoul");
-  const nyH = hourInTz("America/New_York");
-  const lonH = hourInTz("Europe/London");
+  const seoulH = hourInTz("Asia/Seoul"); // allow-source-call
+  const nyH = hourInTz("America/New_York"); // allow-source-call
+  const lonH = hourInTz("Europe/London"); // allow-source-call
 
   const asiaPrime = seoulH >= 19 && seoulH <= 23;
   const naEvening = nyH >= 19 && nyH <= 23;

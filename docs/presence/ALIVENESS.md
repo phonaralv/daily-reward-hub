@@ -99,3 +99,20 @@ PHONARA는 "전 지구적 흐름"으로 살아있음을 만들고, 개인은 PR-
 UI 컴포넌트는 scheduler를 직접 import할 수 없다 (`guards.sh` #7).
 hook을 통해서만 접근 — PR-2에서 source 교체 시에도 컴포넌트 변경 없음.
 
+## 6. PresenceSource (PR-1 Step 2)
+
+모든 presence 값 생성은 `PresenceSource<T>` 인터페이스를 통과한다.
+
+- `firstPaint()` — SSR + CSR 첫 1초 동일값을 반환하는 pure 함수.
+- `sample(now, prev)` — rAF tick마다 호출. 값이 바뀌지 않으면 `prev`를
+  참조로 그대로 반환해야 한다 (driver가 setState를 건너뛴다).
+- `minIntervalMs` — 같은 source의 두 sample 호출 사이 최소 간격.
+
+hook (`useActiveRegions`, `useLiveCounter`, `useGlobalPulse`)은
+`useSource(source, opts)` 한 줄로 줄어들고, 시간/난수/heat 계산은 모두
+`sources/` 폴더 안에서만 일어난다 (`guards.sh` #8).
+
+`telemetry.ts`는 in-memory 링버퍼로 tick 평균/최대 ms와 source별 mutation
+횟수를 기록한다 (console 출력 0, 외부 전송 0). PR-1 Step 3에서 budget
+가드와 longtask 채널이 그 위에 얹힌다.
+

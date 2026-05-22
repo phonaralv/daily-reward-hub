@@ -14,6 +14,7 @@
  * Contract: subscribers MUST NOT call setInterval/setTimeout themselves.
  * All timing is derived from the `now` argument (performance.now()).
  */
+import { recordTick } from "./telemetry";
 
 export type PresenceTick = (now: number) => void;
 
@@ -23,6 +24,7 @@ let visListener: (() => void) | null = null;
 
 function loop(now: number): void {
   if (typeof document === "undefined" || document.visibilityState === "visible") {
+    const start = typeof performance !== "undefined" ? performance.now() : now;
     // Snapshot to allow subscribers to unsubscribe during iteration.
     const snapshot = Array.from(ticks);
     for (const fn of snapshot) {
@@ -36,6 +38,10 @@ function loop(now: number): void {
           console.error("[presence/scheduler] tick threw", err);
         }
       }
+    }
+    if (snapshot.length > 0) {
+      const end = typeof performance !== "undefined" ? performance.now() : now;
+      recordTick(end - start);
     }
   }
   rafId = requestAnimationFrame(loop);
