@@ -3,8 +3,7 @@ import type { GlobalPulseState } from "./types";
 import {
   getTimeMultiplier,
   PRESENCE_FIRST_LIVE_DELAY_MS,
-  stablePresenceHash,
-  PRESENCE_FIRST_PAINT_SEED,
+  presenceLockstepJitter,
 } from "./waveEngine";
 
 /**
@@ -36,10 +35,9 @@ export function useGlobalPulse(): GlobalPulseState {
       if (peak >= 0.9) return "steady";
       return "low";
     };
-    // Per-kind jitter (0..600ms) keeps us out of the same 400ms bucket
-    // as ticker/region-heat. Deterministic per kind via stablePresenceHash.
-    const jitter =
-      stablePresenceHash(`${PRESENCE_FIRST_PAINT_SEED}:global-pulse`) % 600;
+    // Per-kind slot-based jitter keeps us out of the same 400ms bucket
+    // as ticker / region-heat / onboarding-counter.
+    const jitter = presenceLockstepJitter("global-pulse");
     let intervalId: ReturnType<typeof setInterval> | undefined;
     const delayId = setTimeout(() => {
       setState(compute());

@@ -17,6 +17,31 @@ export const PRESENCE_FIRST_PAINT_SEED = "phonara-pr1-presence-v1";
 export const PRESENCE_FIRST_LIVE_DELAY_MS = 1200;
 
 /**
+ * Slot width for staggering live-takeover across presence hooks.
+ * Must exceed the No-Lockstep bucket size (400ms) by enough margin that
+ * timing jitter cannot collapse two slots into the same bucket. 500ms
+ * gives 100ms safety on each side.
+ */
+export const PRESENCE_LOCKSTEP_SLOT_MS = 500;
+/** Number of distinct slots. >= number of concurrent live presence hooks. */
+export const PRESENCE_LOCKSTEP_SLOT_COUNT = 6;
+
+/**
+ * Deterministic per-kind jitter that places each caller into a distinct
+ * 500ms slot, preventing the No-Lockstep invariant from firing on first
+ * live takeover. Two callers with the same jitterKey land in the same slot
+ * (intentional). Different jitterKeys are very unlikely to collide because
+ * we map a 32-bit hash into 6 slots.
+ */
+export function presenceLockstepJitter(
+  jitterKey: string,
+  seed: string = PRESENCE_FIRST_PAINT_SEED,
+): number {
+  const slot = stablePresenceHash(`${seed}:slot:${jitterKey}`) % PRESENCE_LOCKSTEP_SLOT_COUNT;
+  return slot * PRESENCE_LOCKSTEP_SLOT_MS;
+}
+
+/**
  * Deterministic 32-bit hash (FNV-1a). Pure, SSR-safe, dependency-free.
  * Same input on Node, Workerd, and Chromium V8 produces the same integer
  * because `Math.imul` is ECMAScript-standard 32-bit multiply.
@@ -102,9 +127,8 @@ export function useActiveRegions(
     PRESENCE_FIRST_LIVE_DELAY_MS,
     opts.firstLiveDelayMs ?? PRESENCE_FIRST_LIVE_DELAY_MS,
   );
-  const jitter = opts.jitterKey
-    ? stablePresenceHash(`${seed}:jitter:${opts.jitterKey}`) % 600
-    : 0;
+  const jitter = opts.jitterKey ? presenceLockstepJitter(opts.jitterKey, seed) : 0;
+
 
   const firstPaint = useMemo(
     () => getDeterministicRegions(count, seed),
