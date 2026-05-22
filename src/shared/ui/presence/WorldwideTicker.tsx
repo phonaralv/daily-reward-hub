@@ -28,6 +28,7 @@ export function WorldwideTicker() {
 
   return (
     <div
+      data-presence="ticker"
       className="overflow-hidden border-y border-border bg-surface-1/60"
       style={{ contentVisibility: "auto" }}
     >
@@ -38,10 +39,11 @@ export function WorldwideTicker() {
             className="inline-flex items-center gap-2 px-5 text-xs font-medium whitespace-nowrap text-foreground/90"
           >
             <OnlinePulseDot color={m.color} size={6} />
-            {m.text}
+            <span data-presence-text>{m.text}</span>
           </span>
         ))}
       </div>
     </div>
   );
 }
+

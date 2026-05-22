@@ -12,9 +12,17 @@ export function ActiveCountriesIndicator() {
     floor: 30,
     easeMs: 400,
   });
+  const intValue = Math.round(value);
   return (
-    <span className="text-xs text-muted-foreground" data-numeric>
-      🌐 {t("presence.countries.joining", { count: Math.round(value) })}
+    <span
+      data-presence="countries"
+      data-value={intValue}
+      className="text-xs text-muted-foreground"
+      data-numeric
+    >
+      <span data-presence-text>
+        🌐 {t("presence.countries.joining", { count: intValue })}
+      </span>
     </span>
   );
 }
