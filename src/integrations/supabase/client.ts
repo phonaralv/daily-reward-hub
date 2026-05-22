@@ -10,12 +10,17 @@ const SUPABASE_URL =
   (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
   "https://edlhlbwojgdnpdjhorpb.supabase.co";
 
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? "";
+// Dummy fallback prevents `createClient` from throwing "supabaseKey is required"
+// when the real anon key is not yet wired (e.g. Lovable preview without .env).
+// Auth/Realtime/DB calls fail with 401, but the app shell still renders.
+const DUMMY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.phonara-placeholder.placeholder";
+const SUPABASE_ANON_KEY =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DUMMY_KEY;
 
-if (!SUPABASE_ANON_KEY && typeof window !== "undefined") {
+if (SUPABASE_ANON_KEY === DUMMY_KEY && typeof window !== "undefined") {
   // eslint-disable-next-line no-console
   console.warn(
-    "[phonara] VITE_SUPABASE_ANON_KEY missing. Auth/Realtime/DB calls will fail until set in .env.",
+    "[phonara] VITE_SUPABASE_ANON_KEY missing — using placeholder. Set it in .env to enable auth/DB.",
   );
 }
 
