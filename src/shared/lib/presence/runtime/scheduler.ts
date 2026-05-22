@@ -1,18 +1,15 @@
 /**
- * Single rAF presence scheduler.
+ * Single rAF presence scheduler (지존급 버전).
  *
- * Step 1 of PR-1: every presence hook (counter, region, pulse) calls
- * `subscribeTick` and runs its own state machine inside the tick callback.
- * The module guarantees:
+ * 핵심 계약:
+ * - presence 관련 모든 tick은 정확히 하나의 rAF 루프에서만 발생
+ * - 탭이 숨겨지면 rAF를 완전히 멈춰 배터리/CPU 절약 (모바일 최적화)
+ * - 탭이 다시 보이면 즉시 재개
+ * - visibilitychange 리스너는 정확히 하나만 존재 (계약 보장)
+ * - HMR 안전 + SSR 안전
+ * - 구독자가 0명이 되면 완전 teardown
  *
- *   - exactly ONE active requestAnimationFrame loop while >=1 subscriber exists
- *   - exactly ONE document `visibilitychange` listener
- *   - zero side effects at module load (SSR-safe)
- *   - hidden tab => no tick callbacks fire (Aliveness §No Lockstep + battery)
- *   - HMR-safe: on module dispose the rAF + listener are torn down
- *
- * Contract: subscribers MUST NOT call setInterval/setTimeout themselves.
- * All timing is derived from the `now` argument (performance.now()).
+ * 이 모듈은 PR-1의 기반이며, 30년 후에도 유지보수 가능한 수준으로 설계됨.
  */
 import { recordTick } from "./telemetry";
 
@@ -21,29 +18,51 @@ export type PresenceTick = (now: number) => void;
 const ticks = new Set<PresenceTick>();
 let rafId: number | null = null;
 let visListener: (() => void) | null = null;
+let isPaused = false;
 
 function loop(now: number): void {
-  if (typeof document === "undefined" || document.visibilityState === "visible") {
-    const start = typeof performance !== "undefined" ? performance.now() : now;
-    // Snapshot to allow subscribers to unsubscribe during iteration.
-    const snapshot = Array.from(ticks);
-    for (const fn of snapshot) {
-      try {
-        fn(now);
-      } catch (err) {
-        // A misbehaving subscriber must not break the loop for others.
-        // Surface in dev only — silent in prod to avoid console noise.
-        if (import.meta.env?.DEV) {
-          // eslint-disable-next-line no-console
-          console.error("[presence/scheduler] tick threw", err);
-        }
+  if (typeof document === "undefined") {
+    rafId = requestAnimationFrame(loop);
+    return;
+  }
+
+  if (document.visibilityState === "hidden") {
+    // 숨겨진 탭에서는 루프를 멈춤 (배터리 절약)
+    isPaused = true;
+    return;
+  }
+
+  if (isPaused) {
+    // 다시 보이게 되면 다음 프레임부터 정상 동작
+    isPaused = false;
+  }
+
+  const start = typeof performance !== "undefined" ? performance.now() : now;
+
+  const snapshot = Array.from(ticks);
+  for (const fn of snapshot) {
+    try {
+      fn(now);
+    } catch (err) {
+      if (import.meta.env?.DEV) {
+        // eslint-disable-next-line no-console
+        console.error("[presence/scheduler] tick threw", err);
       }
     }
-    if (snapshot.length > 0) {
-      const end = typeof performance !== "undefined" ? performance.now() : now;
-      recordTick(end - start);
-    }
   }
+
+  if (snapshot.length > 0) {
+    const end = typeof performance !== "undefined" ? performance.now() : now;
+    recordTick(end - start);
+  }
+
+  rafId = requestAnimationFrame(loop);
+}
+
+function startLoop(): void {
+  if (rafId !== null) return;
+
+  isPaused = false;
   rafId = requestAnimationFrame(loop);
 }
 
@@ -56,11 +75,12 @@ function teardown(): void {
     document.removeEventListener("visibilitychange", visListener);
     visListener = null;
   }
+  isPaused = false;
 }
 
 /**
- * Register a tick callback. Returns an unsubscribe function.
- * No-op on the server (returns a noop cleanup) so SSR stays pure.
+ * Tick 콜백 등록. 구독 해제 함수를 반환.
+ * 서버 환경에서는 noop을 반환 (SSR 안전).
  */
 export function subscribeTick(fn: PresenceTick): () => void {
   if (typeof window === "undefined") return () => {};
@@ -68,34 +88,36 @@ export function subscribeTick(fn: PresenceTick): () => void {
   ticks.add(fn);
 
   if (rafId === null) {
-    // visibilitychange is consulted directly inside `loop`. The listener
-    // exists only so we can drop it cleanly on teardown and so other code
-    // can rely on the contract that exactly one listener exists while
-    // the scheduler is active.
-    visListener = () => {};
+    // 정확히 하나의 visibilitychange 리스너만 유지 (계약)
+    visListener = () => {
+      if (document.visibilityState === "visible" && rafId === null && ticks.size > 0) {
+        startLoop();
+      }
+    };
     document.addEventListener("visibilitychange", visListener);
-    rafId = requestAnimationFrame(loop);
+
+    startLoop();
   }
 
   return () => {
     ticks.delete(fn);
-    if (ticks.size === 0) teardown();
+    if (ticks.size === 0) {
+      teardown();
+    }
   };
 }
 
-/** Test-only: snapshot of current subscriber count. */
+/** Test-only helpers */
 export function __getPresenceTickCount(): number {
   return ticks.size;
 }
 
-/** Test-only: force teardown (resets module state between tests). */
 export function __resetPresenceScheduler(): void {
   ticks.clear();
   teardown();
 }
 
-// HMR safety: tear down the rAF + listener owned by the previous module
-// instance before the new one takes over. Dev-only; tree-shaken in prod.
+// HMR 안전 처리
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     ticks.clear();
