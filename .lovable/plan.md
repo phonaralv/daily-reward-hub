@@ -75,6 +75,19 @@ Seoul, Tokyo, Singapore, Bangkok, Los Angeles, New York, London, Berlin, Dubai, 
 ```
 ko 기본 + 글로벌 도시명 자연스럽게 혼합(예: "Tokyo · 도쿄 지금 활발해요 🔥").
 
+### Dynamic Presence Timing Engine (신규 — 정적 숫자 금지)
+
+`src/shared/lib/presence/liveEngine.ts`:
+- `useLiveCounter(seed, { minDelta, maxDelta, intervalMs:[2000,8000], waveMs:[30000,90000] })` — rAF easing + `setTimeout` 랜덤 interval. 증가만 X, 미세 감소도 허용. 동시 변경 방지(컴포넌트별 jitter offset).
+- 시간대 multiplier(`getTimeMultiplier(now)`): Asia prime → onboarding/activity ↑, NA evening → trade/reward ↑, KST 새벽 → low/steady.
+- Visibility/Perf: `document.hidden` → 일시정지 + 재개 시 fast-forward, `requestIdleCallback` 우선, 저사양(navigator.deviceMemory ≤ 2 or hardwareConcurrency ≤ 4) → interval ×2, reduced-motion → 즉시 점프(easing 없음).
+- Kill switch 연동: `presence_dynamic_updates_enabled` OFF → seed 정지값 유지, `presence_update_intensity` (low/normal/launch/viral)로 delta·interval 스케일.
+- 동시 변경 금지: 글로벌 `useLiveScheduler`가 컴포넌트들의 다음 tick을 분산(스큐 ±400ms).
+
+**적용 대상**: `LiveOnboardingCounter`, `ActiveCountriesIndicator`, `RewardWaveBanner`(텍스트 rotate), `MissionActivityPulse`, `WorldwideTicker` 메시지 rotate.
+
+**규칙**: 매초 변경 금지 / 동일 패턴 반복 금지 / 큰 점프 금지 / 모든 변경은 easing.
+
 ### UI 컴포넌트 (`src/shared/ui/presence/`)
 - `WorldwideTicker.tsx` — region/reward/mission/streak rotate marquee (GPU transform-only, reduced-motion 시 fade rotate)
 - `RegionHeatBadge.tsx` — pulse dot + KR/원어 도시명
@@ -89,7 +102,8 @@ ko 기본 + 글로벌 도시명 자연스럽게 혼합(예: "Tokyo · 도쿄 지
 ### 규칙 (CI/README 명문화)
 - ❌ 개인 수익/출금/유저 이름 fake 금지 (`src/shared/lib/presence/RULES.md`)
 - ✅ aggregate count / region pulse / trend bias만 노출
-- ✅ kill switch `presence_engine_enabled`로 즉시 OFF 가능
+- ✅ 모든 카운터/티커는 `liveEngine` 경유 (정적 하드코딩 금지)
+- ✅ kill switch `presence_engine_enabled`, `presence_dynamic_updates_enabled`, `presence_update_intensity`로 즉시 OFF/조절
 - `scripts/guards.sh`에 fake earning 패턴 grep (`mockUser|fakeWithdrawal|fakeEarnings`) → exit 1
 
 ## 6. 라우트 셸 (8개)
@@ -181,7 +195,7 @@ src/features/.gitkeep
 - **03_profiles** — `profiles`(referral_code nanoid8, tier, device_fingerprint, locale, timezone) + `on_auth_user_created` trigger
 - **04_wallets_ledger** — `wallets`, append-only `ledger`, `_apply_ledger()`
 - **05_onboarding** — `onboarding_progress` + `complete_onboarding_step()`(welcome 15,000 PHON 멱등), `app_install` step 예약
-- **06_kill_switches** — 11키 seed + `get_kill_switch()` (presence 키 포함: `presence_engine_enabled`, `presence_seed_ratio`, `launch_presence_mode`)
+- **06_kill_switches** — 13키 seed + `get_kill_switch()` (presence 키 포함: `presence_engine_enabled`, `presence_seed_ratio`, `launch_presence_mode`, `presence_dynamic_updates_enabled`, `presence_update_intensity`)
 - **07_notifications** — notifications/preferences/push_tokens + RLS + RPC
 
 전 테이블 RLS ON. 모든 RPC `SECURITY DEFINER SET search_path=public`.
@@ -211,7 +225,9 @@ src/features/.gitkeep
 - [ ] `prefers-reduced-motion` ON → ticker/marquee/confetti 스킵
 - [ ] WorldwideTicker가 region rotate (Seoul/Tokyo/NY 등) 동작
 - [ ] GlobalPulseChip이 시간대별 상태 변경 (Asia prime/NA evening)
-- [ ] LiveOnboardingCounter aggregate 카운트업(tabular-nums)
+- [ ] LiveOnboardingCounter aggregate 카운트업(tabular-nums), 2~8초 자연 변동, 동시 변경 없음
+- [ ] hidden tab → presence 업데이트 일시정지(CPU 급감), 재개 시 부드럽게 복귀
+- [ ] reduced-motion → count easing 제거, 즉시 점프만
 - [ ] presence RULES.md 존재 + guards.sh fake earning grep 통과
 - [ ] iOS Safari 키보드 input 가림 0
 - [ ] `useNotifications` 더미에서 unread/realtime 동작
@@ -230,3 +246,17 @@ src/features/.gitkeep
 3. 마이그레이션 01~07 SQL 작성 → 외부 Supabase 적용 가이드 출력
 4. 빌드 + gzip 측정 + 가드 스크립트 실행
 5. PR-2 plan은 다음 턴에 별도 제시
+
+---
+
+## Execution Rules (Foundation-Only)
+
+우선순위: **stable architecture → clean compile → mobile-safe UX → PWA safety → CI guards → reusable infra**.
+
+- ❌ UI 비주얼 과설계 금지, 토큰 과소비 금지, 비즈니스 로직 금지
+- ✅ presence UI는 lightweight 스켈레톤 + liveEngine 훅만 — 화려한 맵/장식 효과는 PR-2/PR-3로 deferred
+- ✅ `WorldActivityMapPlaceholder`는 정적 SVG dot mask 1장 (애니메이션 1개 이하)
+- ✅ `RewardWaveBanner`/`TrendingMissionPulse`는 텍스트 rotate + 단일 pulse dot만
+- ✅ 모든 생성 코드는 컴파일 성공해야 완료 — 미사용 import 0, 타입 에러 0
+- ✅ 토큰 위험 시: 인프라(클라이언트/미들웨어/마이그레이션/가드) > 라우트 셸 > presence UI > 시각 디테일 순으로 우선
+
