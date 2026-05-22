@@ -24,7 +24,15 @@ export const PRESENCE_FIRST_LIVE_DELAY_MS = 1200;
  */
 export const PRESENCE_LOCKSTEP_SLOT_MS = 500;
 /** Number of distinct slots. >= number of concurrent live presence hooks. */
-export const PRESENCE_LOCKSTEP_SLOT_COUNT = 6;
+export const PRESENCE_LOCKSTEP_SLOT_COUNT = 4;
+
+/**
+ * Quiet window (ms from mount) reserved for deterministic slot takeovers.
+ * Any non-slotted live presence (e.g. random-interval counters) must wait
+ * past this point before its first mutation.
+ */
+export const PRESENCE_QUIET_WINDOW_MS =
+  PRESENCE_FIRST_LIVE_DELAY_MS + PRESENCE_LOCKSTEP_SLOT_COUNT * PRESENCE_LOCKSTEP_SLOT_MS + 400;
 
 /**
  * Deterministic per-kind jitter that places each caller into a distinct
