@@ -11,8 +11,10 @@ lands in PR-2.
 
 - TanStack Start v1 (React 19, Vite 7, Cloudflare Workers SSR)
 - Tailwind v4 with HSL semantic tokens (`src/styles.css`)
-- External Supabase project `edlhlbwojgdnpdjhorpb` (Lovable Cloud disabled)
+- **Lovable Cloud Supabase** `fliacentokuffbwjysjc` (실제 PHONARA 백엔드)
 - Zustand + TanStack Query, Framer Motion, Sonner via `@/shared/lib/notify`
+
+> ⚠️ `edlhlbwojgdnpdjhorpb`는 PHONARA와 무관한 별도 프로젝트입니다. 사용하지 마세요.
 
 ---
 
@@ -21,7 +23,7 @@ lands in PR-2.
 ```bash
 bun install
 cp .env.example .env
-# fill VITE_SUPABASE_ANON_KEY from Supabase Dashboard → Settings → API
+# Lovable Cloud 내부에서 anon key 확인 후 입력
 bun run dev
 ```
 
@@ -32,8 +34,8 @@ calls 401 but the shell renders for layout work.
 
 | Variable | Where | Purpose |
 | --- | --- | --- |
-| `VITE_SUPABASE_URL` | client + SSR | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | client + SSR | Publishable anon key |
+| `VITE_SUPABASE_URL` | client + SSR | Supabase project URL (Lovable Cloud) |
+| `VITE_SUPABASE_ANON_KEY` | client + SSR | Publishable anon key from Lovable Cloud |
 | `SUPABASE_URL` | server fns | Same URL, server side |
 | `SUPABASE_PUBLISHABLE_KEY` | server fns | Server-side publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | server fns only | Admin client (PR-2+) — **never** expose |
@@ -73,7 +75,7 @@ Checks:
 2. No hardcoded hex colors outside `src/styles.css`.
 3. No `rgb()/rgba()` literals in components.
 4. `src/pages/` does not exist (TanStack uses `src/routes/`).
-5. `sonner` is only imported via `@/shared/lib/notify`.
+5. `sonner` is only imported via `@/shared/lib/notify`
 
 Same rules are also enforced by `eslint.config.js`.
 
