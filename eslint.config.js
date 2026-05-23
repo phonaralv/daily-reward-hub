@@ -57,6 +57,29 @@ export default tseslint.config(
           message:
             "Hardcoded rgb()/rgba(). Use a design token from src/styles.css.",
         },
+        // Guard #11 — wallet/ledger single-entry-point. The only mutation
+        // path is the `claim_*` RPCs (which INSERT into ledger_entries and
+        // let the trigger upsert wallets). Direct .from('wallets').update /
+        // .from('ledger_entries').insert/update/delete from app code is
+        // forbidden. Allowed callers: server fns reading via .select() only.
+        {
+          selector:
+            "CallExpression[callee.property.name=/^(insert|update|delete|upsert)$/] > CallExpression.callee[callee.property.name='from'][arguments.0.value='wallets']",
+          message:
+            "wallets is trigger-managed. Never write directly — INSERT into ledger_entries via a SECURITY DEFINER RPC.",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name=/^(update|delete|upsert)$/] > CallExpression.callee[callee.property.name='from'][arguments.0.value='ledger_entries']",
+          message:
+            "ledger_entries is append-only. UPDATE/DELETE/UPSERT are permanently forbidden.",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='insert'] > CallExpression.callee[callee.property.name='from'][arguments.0.value='ledger_entries']",
+          message:
+            "Direct INSERT into ledger_entries is forbidden. Use a SECURITY DEFINER RPC (e.g. claim_daily_reward).",
+        },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
