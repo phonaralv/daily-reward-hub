@@ -1,184 +1,96 @@
 
-# Phase 2 Finalize + Phase 3 (Referral · Fraud · VIP · Leaderboard) — Single PR
+# Step A — 로그인 / 회원가입 끝판왕 UI/UX
 
-승인된 범위 전체를 단일 PR로 구현합니다. 단일 진입점 / 원자성 / 실시간 / 보안 / 확장성 — 5대 우위 원칙을 모든 신규 코드에 일관되게 적용합니다.
+확정 조건: **flat 라우트** · **비파괴(`auth.ts`/`useAuth.ts`/`auth.types.ts` 시그니처 무변경)** · **실효적 PasswordStrengthMeter** · **프로덕션급 UI/UX** · **종료 후 정형 보고**.
 
----
+## 사전 확인 (코드베이스 실측)
+- `@fingerprintjs/fingerprintjs` 이미 설치 + `useFingerprint()` 이미 `__root.tsx` 마운트됨 → Phase 4의 fpjs 작업은 검증만 남음.
+- `src/components/ui/sonner.tsx` 존재하나 `__root.tsx`에 `<Toaster />` 미마운트 → 본 Step에서 마운트.
+- `src/routes/auth/callback.tsx` **부재** → 본 Step에서 `src/routes/auth.callback.tsx` (flat → `/auth/callback`) 신규 생성.
+- 기존 디자인 토큰은 HSL 기반(`--primary`, `--accent-cyan`, `--accent-pink` 등). 신규 auth 토큰도 HSL로 통일.
 
-## Step 0 — Phase 2 Fix-ups (즉시)
+## A-1. 디자인 토큰 (`src/styles.css` 말미 추가, 기존 무수정)
+- `--auth-glow-cyan/purple/pink/gold` (HSL)
+- `--gradient-auth-mesh` (4-stop radial)
+- `--shadow-auth-card` (1px inner border + neon halo)
+- keyframes: `auth-blob-a/b/c`, `auth-shimmer`, `auth-shake`, `auth-pop`
+- utilities: `.auth-shimmer`, `.auth-grid-overlay` (radial mask 페이드 그리드)
 
-1. `tests/presence/budget.test.ts` — `MAX_SOURCES_PER_ROUTE` 8 → 10 (주석으로 사유 명시)
-2. `src/shared/lib/presence/sources/rewardClaimSource.ts` — `setTimeout(...)` 라인에 `// allow-source-fade` 주석 추가
+## A-2. AuthShell — `src/features/auth/ui/AuthShell.tsx` (신규)
+- Layer 1 베이스 background
+- Layer 2 3 blob (cyan/purple/pink), `mix-blend-screen`, `blur-3xl`, 18–24s loop
+- Layer 3 페이드 그리드(`.auth-grid-overlay`)
+- Layer 4 glass card: `backdrop-blur-2xl`, `bg-white/[0.04]`, `border-white/10`, `shadow-[var(--shadow-auth-card)]`
+- slots: `brand`, `headline`, `children`, `footer`
+- safe-area inset, `prefers-reduced-motion` 대응(CSS @media 단에서 blob 정지)
 
-검증: `bunx vitest run` 59/59 + `bash scripts/guards.sh` 12/12 PASS.
+## A-3. Micro 컴포넌트 (`src/features/auth/ui/`)
+- **`NeonInput.tsx`** — floating label, focus 시 cyan→purple gradient ring, `aria-invalid` pink, autofill 색상 무력화, leading icon slot, `aria-describedby` 연결.
+- **`NeonButton.tsx`** — variants: `primary`(gradient) / `secondary`(glass) / `ghost`. 상태 4종: idle / loading(shimmer+spinner, `aria-busy`) / success(`auth-pop` 체크) / error(`auth-shake`).
+- **`PasswordStrengthMeter.tsx`** — **실효적 검증**:
+  - 길이 가산: 8/12/16자 임계.
+  - 다양성 가산: 소/대문자/숫자/특수 4종.
+  - 감점: 동일문자 3연속, 키보드 시퀀스(`qwerty`/`asdf`/`1234`/`abcd`), top-50 weak dict(`password`, `qwerty123`, `letmein`, `admin`, `iloveyou` 등), 이메일 local-part 포함, 단일 케이스(전소문자/전숫자) 페널티.
+  - 점수 0–4 → 5칸 막대 (red→amber→cyan→purple→neon-green), 권고 문구 한국어.
+  - 외부 의존 0, 순수 함수 `scorePassword(pwd, {email?})` export.
+- **`AuthDivider.tsx`** — "또는" + 좌우 fade rule.
+- **`AuthTabs.tsx`** — segmented control (Magic Link / 비밀번호), active indicator slide.
 
-### Phase 2 최종 보고 (Step 0 직후 chat 메시지로)
+## A-4. `src/features/auth/auth.ts` — **비파괴 확장만**
+기존 export(`signIn`, `signUp`, `signOut`, `sendMagicLink`, `getCurrentSession` 등) **시그니처·반환형·이름 일체 무변경**. 추가만:
+- `signUpWithPassword({email,password})` → `auth.signUp({ email, password, options: { emailRedirectTo: ${origin}/auth/callback } })`
+- `requestPasswordReset(email)` → `auth.resetPasswordForEmail(email, { redirectTo: ${origin}/reset-password })`
+- `updatePassword(newPassword)` → `auth.updateUser({ password })`
 
-- HEAD SHA + Phase 2 누적 변경 파일 목록
-- DB: streaks / quests / user_quests + ENUM + 3 RPCs + RLS + grants 요약
-- vitest / guards 최종 결과
-- 단일 진입점 grep 0건 증빙
-- 5대 기술 우위 체크리스트 (Phase 2 시점)
+`auth.types.ts` / `useAuth.ts`는 **수정 없음**.
 
----
+## A-5. 라우트
+- **`src/routes/login.tsx`** — 재작성: AuthShell + AuthTabs(Magic Link / 비밀번호) + footer 링크(`/signup`, `/reset-password-request`). 기존 `useAuth` 그대로 사용.
+- **`src/routes/signup.tsx`** — 신규: AuthTabs + PasswordStrengthMeter + 약관/개인정보 체크. 성공 시 "이메일 확인 안내" 상태.
+- **`src/routes/auth.callback.tsx`** — 신규 (`/auth/callback`): `supabase.auth` 세션 이벤트가 자동 처리, 1초 polling 후 세션 있으면 `/`로 navigate, 없으면 에러 메시지 + `/login` 링크.
+- **`src/routes/reset-password-request.tsx`** — 신규: 이메일 입력 → `requestPasswordReset` → 발송 안내.
+- **`src/routes/reset-password.tsx`** — 신규: 새 비밀번호 입력(메터 포함) → `updatePassword` → `/`.
 
-## Step 1 — DB Migration (Phase 3 핵심)
+## A-6. 루트 마운트
+- `src/routes/__root.tsx`에 `<Toaster position="top-center" richColors closeButton />` 한 줄 추가 (나머지 변경 0). `useFingerprint`/`useLedgerStream` 등 기존 로직 무변경.
 
-단일 마이그레이션 파일로 일괄 적용. 모든 RPC는 `SECURITY DEFINER` + `REVOKE PUBLIC` + `GRANT authenticated`.
+## A-7. 품질 게이트
+- 모든 폼: Enter 제출 / ESC 클리어 / `aria-live="polite"` 에러 영역 / `aria-busy` pending / focus visible.
+- 360px / 1024px / 1440px 3-breakpoint 시각 검증.
+- console error 0, 빌드 PASS, 기존 `scripts/guards.sh` PASS 유지.
 
-### 1.1 ENUM 확장
+## 신규/수정 파일 목록
+신규 (10):
+- `src/features/auth/ui/AuthShell.tsx`
+- `src/features/auth/ui/NeonInput.tsx`
+- `src/features/auth/ui/NeonButton.tsx`
+- `src/features/auth/ui/PasswordStrengthMeter.tsx`
+- `src/features/auth/ui/AuthDivider.tsx`
+- `src/features/auth/ui/AuthTabs.tsx`
+- `src/routes/signup.tsx`
+- `src/routes/auth.callback.tsx`
+- `src/routes/reset-password-request.tsx`
+- `src/routes/reset-password.tsx`
 
-```sql
-ALTER TYPE ledger_kind ADD VALUE IF NOT EXISTS 'referral_reward';
-ALTER TYPE ledger_kind ADD VALUE IF NOT EXISTS 'vip_bonus';
-ALTER TYPE ledger_kind ADD VALUE IF NOT EXISTS 'leaderboard_reward';
-```
+수정 (3):
+- `src/styles.css` (말미 추가)
+- `src/routes/__root.tsx` (`<Toaster />` 1줄)
+- `src/routes/login.tsx` (재작성, `useAuth` API 사용 무변경)
+- `src/features/auth/auth.ts` (3개 함수 **추가만**)
 
-### 1.2 신규 테이블 (6종)
+## 비파괴 보증
+- `auth.types.ts`, `useAuth.ts` 무수정.
+- `auth.ts` 기존 export 무변경 (추가만).
+- 기존 라우트(`_authenticated`, `index`, `wallet`, `trade` 등) 무수정.
+- DB 변경 0건, RPC 0건, Lovable 전용 SDK 0건 (sonner/supabase-js/tanstack만).
 
-| 테이블 | 핵심 컬럼 | RLS |
-|---|---|---|
-| `referral_codes` | user_id PK, code UNIQUE, created_at | self_select |
-| `referrals` | referrer_id, referee_id UNIQUE, code, created_at, status (`pending|rewarded|fraud`) | referrer/referee self_select |
-| `device_fingerprints` | id, user_id, visitor_id, server_hash, ip_hash, ua_hash, first_seen, last_seen, hit_count, UNIQUE(user_id, visitor_id) | self_select |
-| `fraud_signals` | id, user_id, kind, severity (`low|med|high`), rule_code, payload jsonb, created_at | self_select (low/med only) |
-| `leaderboard_periods` | id, kind (`weekly|monthly`), starts_at, ends_at UNIQUE, settled_at | public_select |
-| `leaderboard_entries` | period_id, user_id, score, rank, reward_amount, UNIQUE(period_id, user_id) | public_select |
+## 종료 보고 포맷 (Step A 완료 시)
+1. 변경 파일 목록 (신규/수정)
+2. 신규 DB 객체: 없음
+3. Guard 규칙: 기존 PASS 유지
+4. Lovable 종속성 신규: 없음
+5. UI/UX 자가평가 (mesh / glass / 입력 / 버튼 상태 / 메터 / 접근성 / 반응형) ✓△✗
+6. 트레이딩 영향: 없음
+7. 다음 Phase(B = Phase 4) 진입 전 확인: 마이그레이션 SQL 사전 검토 동의 여부
 
-### 1.3 RPC 함수 (모두 SECURITY DEFINER, search_path=public)
-
-- `create_referral_code() RETURNS text` — idempotent, 6자 base32
-- `redeem_referral_code(p_code text) RETURNS TABLE(...)` — 자기-초대 차단, UNIQUE(referee) 차단, fingerprint 동일 차단, `referrals` INSERT만 (보상은 별도)
-- `record_fingerprint(p_visitor_id text, p_client_hints jsonb) RETURNS void` — 서버 IP/UA hash 보강 (RPC 내부에서 `current_setting('request.headers', true)::jsonb` 사용), upsert
-- `evaluate_referral_fraud(p_referrer uuid, p_referee uuid) RETURNS text` — 'ok'|'review'|'block'; 4규칙 (R1~R4) 평가 후 `fraud_signals` append
-- `claim_referral_reward(p_referee uuid) RETURNS TABLE(amount bigint, new_balance bigint)` — fraud 평가 → ok시 `_apply_reward()` 호출 → `referrals.status='rewarded'`
-- `vip_tier(p_user_id uuid) RETURNS int` — 누적 `wallets.balance` + 30일 ledger 합산 기반 0~5 tier
-- `vip_multiplier(p_user_id uuid) RETURNS numeric` — `1.00 / 1.05 / 1.10 / 1.15 / 1.25 / 1.50`
-- `_apply_reward(p_user uuid, p_kind ledger_kind, p_base bigint, p_ref_kind text, p_ref_id text) RETURNS bigint` — **신규 내부 헬퍼**: VIP multiplier 적용 후 `ledger_entries` INSERT, 최종 amount 반환. 모든 claim RPC가 이걸 호출 → 단일 multiplier 경로 보장
-- 기존 `claim_daily_reward` / `claim_quest`를 `_apply_reward` 사용으로 리팩터 (외부 인터페이스 무변경, base amount만 전달)
-- `settle_leaderboard(p_period_id uuid) RETURNS int` — advisory lock + `settled_at IS NULL` 가드, 상위 N명에 `_apply_reward(kind='leaderboard_reward')` 루프, `ref_id='lb:<period>:<rank>'` UNIQUE로 멱등
-
-### 1.4 pg_cron
-
-- weekly leaderboard 정산: 매주 월요일 00:05 UTC → `/api/public/hooks/settle-leaderboard` POST
-- 라우트 핸들러가 현재 만료 period 조회 후 `settle_leaderboard()` 호출
-
-### 1.5 Realtime publication
-
-- 기존 `ledger_entries` 그대로 — 신규 kind 자동 push (확장성 증명, 추가 작업 0)
-- `leaderboard_entries`는 `ADD TABLE`로 publication 추가 (rank 변동 push)
-
----
-
-## Step 2 — Entities (3 신규)
-
-- `src/entities/referral/index.ts` — `ReferralCodeDTO`, `ReferralDTO`, `myReferralQueryOptions`, `useMyReferrals`
-- `src/entities/vip/index.ts` — `VipDTO { tier, multiplier, nextThreshold }`, `useMyVip`
-- `src/entities/leaderboard/index.ts` — `LeaderboardPeriodDTO`, `LeaderboardEntryDTO`, `useCurrentLeaderboard`
-
-ENUM 확장:
-- `src/entities/ledger/index.ts` — `LedgerKind` += `'referral_reward' | 'vip_bonus' | 'leaderboard_reward'`
-
----
-
-## Step 3 — Server Functions
-
-- `src/lib/referral.functions.ts` — `getMyReferralCode`, `redeemReferralCode`, `claimReferralReward`, `listMyReferrals`
-- `src/lib/vip.functions.ts` — `getMyVip` (RPC `vip_tier` + `vip_multiplier` 호출만, 클라에서 multiplier 계산 금지)
-- `src/lib/leaderboard.functions.ts` — `getCurrentLeaderboard`, `getMyRank`
-- `src/lib/fingerprint.functions.ts` — `recordFingerprint(visitorId, clientHints)` → RPC
-
-모두 Zod inputValidator + `requireSupabaseAuth` middleware.
-
----
-
-## Step 4 — Fraud Infrastructure
-
-- `bun add @fingerprintjs/fingerprintjs`
-- `src/shared/lib/fraud/fingerprint.ts` — fpjs wrapper, `ensureFingerprint()` (idempotent, 세션당 1회)
-- `src/routes/__root.tsx` — 로그인 직후 `ensureFingerprint()` → `recordFingerprint()` 호출 (root 1회만)
-- 서버 측: `record_fingerprint` RPC 내부에서 `request.headers`의 `x-forwarded-for`, `user-agent`, `accept-language` 해시(`encode(digest(...,'sha256'),'hex')`) → 컬럼 저장
-
-규칙 (`evaluate_referral_fraud` 내부):
-- R1: referrer.visitor_id ∩ referee.visitor_id ≠ ∅ → block
-- R2: 같은 ip_hash 24h 내 referee 3건 초과 → block
-- R3: referee 가입 후 1h 내 referral redeem → review
-- R4: referrer의 `fraud_signals` severity=high 존재 → block
-
----
-
-## Step 5 — PresenceSource (1 신규)
-
-- `src/shared/lib/presence/sources/leaderboardRankSource.ts` — react-query 캐시 어댑터 (walletBalanceSource 패턴 그대로). PURITY 유지, React-free.
-- `src/shared/lib/presence/sources/index.ts` — `PRESENCE_SOURCE_KEYS.leaderboardRank = 'leaderboard-rank'`
-- `tests/presence/budget.test.ts` — `MAX_SOURCES_PER_ROUTE` 10 → 12 재조정
-
----
-
-## Step 6 — UI Features
-
-- `src/features/referral/ReferralCard.tsx` — 내 코드 표시 + 복사 + 진행도
-- `src/features/referral/RedeemCodeForm.tsx` — 신규 가입자가 코드 입력
-- `src/features/referral/ReferralList.tsx` — 내가 초대한 사람 목록 + status
-- `src/features/vip/VipBadge.tsx` — tier 표시 (multiplier는 서버 값 그대로 read-only)
-- `src/features/leaderboard/LeaderboardTable.tsx` — 현재 period rank 표시
-- `src/routes/refer.tsx` — 기존 placeholder 교체: ReferralCard + RedeemCodeForm + ReferralList
-- `src/routes/missions.tsx` — VipBadge + LeaderboardTable 위젯 추가
-
----
-
-## Step 7 — Server Route (cron)
-
-- `src/routes/api/public/hooks/settle-leaderboard.ts`
-  - POST 핸들러: `apikey` 헤더 검증 → `supabaseAdmin.rpc('settle_leaderboard', { p_period_id })` 호출
-  - 결과 로깅 + JSON 응답
-- `supabase--insert`로 pg_cron schedule 등록 (매주 월 00:05 UTC)
-
----
-
-## Step 8 — Guards & Tests
-
-### `scripts/guards.sh` 추가
-- **Guard #13** — `referrals`/`referral_codes`/`leaderboard_periods`/`leaderboard_entries`/`fraud_signals`/`device_fingerprints` 직접 write 금지 (RPC만)
-- **Guard #14** — `vip_multiplier` 계산을 클라이언트가 수행하지 않음 (`src/` grep: 곱셈/하드코딩 multiplier 숫자 + `vip` 키워드 패턴 금지, RPC 응답만 read)
-- **Guard #15** — fpjs는 `src/shared/lib/fraud/fingerprint.ts` 외에서 import 금지
-
-### Tests
-- `tests/reward/referral.test.ts` — 단일 진입점 유지, RPC 외 mutation 0, 자기-초대 거부 시뮬레이션 (정적 grep + behavior)
-- `tests/reward/fraud-rules.test.ts` — R1~R4 규칙 정적 invariant
-- `tests/reward/leaderboard.test.ts` — settle 멱등성 보장 (UNIQUE ref_id), settle_at 가드
-- `tests/reward/vip-multiplier.test.ts` — `_apply_reward`가 모든 claim 경로의 단일 multiplier 진입점임을 grep으로 증명
-
----
-
-## Step 9 — 검증 & 최종 보고
-
-- `bunx vitest run` (목표 100%)
-- `bash scripts/guards.sh` (15/15)
-- aliveness-check before/after diff = 0
-- `rg "\.from\(.(ledger_entries|wallets|streaks|user_quests|referrals|referral_codes|fraud_signals|device_fingerprints|leaderboard_entries|leaderboard_periods).\)\.(insert|update|delete|upsert)" src` → 0건
-- 5대 우위 체크리스트 + Phase 3 변경 파일 목록 + HEAD SHA 보고
-
----
-
-## 예상 변경 규모
-
-- 신규: ~26 파일 (DB 1, entities 3, server fns 4, fraud 2, presence 1, features 5, route 1, tests 4, guards 0(편집))
-- 수정: ~6 파일 (`__root.tsx`, `missions.tsx`, `refer.tsx`, `ledger/index.ts`, `guards.sh`, `budget.test.ts`)
-- 의존성: `@fingerprintjs/fingerprintjs` 1개 추가
-
-## 리스크 & 대응 (재확인)
-
-| # | 리스크 | 대응 |
-|---|---|---|
-| R1 | self-referral | RPC에서 `referrer != referee` + fingerprint 일치 차단 |
-| R2 | fpjs visitor_id 위조 | 서버 IP/UA 해시 결합, 단독 신뢰 금지 |
-| R3 | VIP multiplier 비결정성 | `_apply_reward` 단일 헬퍼 + `ref_id`에 multiplier 메타 |
-| R4 | leaderboard 중복 정산 | advisory lock + `settled_at IS NULL` + UNIQUE ref_id |
-| R5 | pg_cron 권한 폭주 | 전용 함수 1개만 grant, system actor |
-| R6 | fraud false positive | `'review'` 상태 + 감사 로그 (fraud_signals) |
-| R7 | ENUM 확장으로 기존 트리거 영향 | `apply_ledger_to_wallet`은 kind 무관 — 영향 0 |
-
----
-
-승인되면 Step 0부터 순차 진행하고, Step 0 직후 Phase 2 최종 보고를, Step 9 후 Phase 3 최종 보고를 제출합니다.
+빌드 모드 전환 시 단일 패스로 위 순서대로 작성합니다.
