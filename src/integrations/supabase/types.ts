@@ -210,6 +210,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       quests: {
         Row: {
           active: boolean
@@ -446,6 +479,10 @@ export type Database = {
         }[]
       }
       create_referral_code: { Args: never; Returns: string }
+      ensure_current_leaderboard_period: {
+        Args: { p_kind?: string }
+        Returns: string
+      }
       evaluate_referral_fraud: {
         Args: { p_referee: string; p_referrer: string }
         Returns: string
