@@ -31,6 +31,17 @@ export {
   worldActivityHeatSource,
   type RegionHeat,
 } from "./worldActivityHeatSource";
+export {
+  walletBalanceSource,
+  type WalletBalanceSnapshot,
+  type WalletBalanceSource,
+} from "./walletBalanceSource";
+export {
+  rewardClaimSource,
+  pushRewardClaim,
+  type RewardClaim,
+  type RewardClaimSource,
+} from "./rewardClaimSource";
 
 /**
  * Canonical telemetry / debug keys for every Presence source.
@@ -57,6 +68,8 @@ export const PRESENCE_SOURCE_KEYS = {
   trendingMission: "mission:trending",
   onlineDot: "online:dot",
   worldActivity: "world:activity",
+  walletBalance: "wallet-balance",
+  rewardClaim: "reward-claim",
 } as const;
 
 /**

@@ -62,6 +62,113 @@ export type Database = {
         }
         Relationships: []
       }
+      quests: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string | null
+          reward_amount: number
+          sort_order: number
+          target: number
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string | null
+          reward_amount: number
+          sort_order?: number
+          target: number
+          title: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string | null
+          reward_amount?: number
+          sort_order?: number
+          target?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      streaks: {
+        Row: {
+          current_day: number
+          last_claim_date: string | null
+          longest: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_day?: number
+          last_claim_date?: string | null
+          longest?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_day?: number
+          last_claim_date?: string | null
+          longest?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_quests: {
+        Row: {
+          claimed_at: string | null
+          completed_at: string | null
+          progress: number
+          quest_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          progress?: number
+          quest_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          progress?: number
+          quest_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_quests_quest_code_fkey"
+            columns: ["quest_code"]
+            isOneToOne: false
+            referencedRelation: "quests"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "user_quests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallets: {
         Row: {
           balance: number
@@ -90,8 +197,26 @@ export type Database = {
         Returns: {
           amount: number
           new_balance: number
+          next_amount: number
+          streak_day: number
         }[]
       }
+      claim_quest: {
+        Args: { p_code: string }
+        Returns: {
+          amount: number
+          new_balance: number
+        }[]
+      }
+      progress_quest: {
+        Args: { p_code: string; p_delta: number }
+        Returns: {
+          completed: boolean
+          progress: number
+          target: number
+        }[]
+      }
+      streak_reward_amount: { Args: { p_day: number }; Returns: number }
     }
     Enums: {
       ledger_kind: "daily_reward" | "quest_reward" | "adjustment" | "spend"

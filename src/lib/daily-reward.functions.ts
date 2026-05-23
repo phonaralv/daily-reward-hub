@@ -1,12 +1,15 @@
 /**
  * Daily Reward — single entry point: `claim_daily_reward()` RPC.
  *
- * The RPC INSERTs into `ledger_entries` (UNIQUE(user_id, ref_kind, ref_id)),
- * which fires `apply_ledger_to_wallet` trigger to credit `wallets.balance`.
+ * The RPC atomically:
+ *   1. Validates streak (UTC date arithmetic)
+ *   2. INSERTs into `ledger_entries` (UNIQUE → idempotent)
+ *   3. Trigger `apply_ledger_to_wallet` credits `wallets.balance`
+ *   4. Upserts `streaks` (current_day, last_claim_date, longest)
  *
  * Errors:
- *   - already_claimed (sqlstate P0001) — user already claimed today
- *   - unauthorized   (sqlstate 42501) — no session
+ *   - already_claimed (P0001) — user already claimed today (or duplicate)
+ *   - unauthorized   (42501)  — no session
  */
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -14,6 +17,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export interface DailyClaimResult {
   amount: number;
   newBalance: number;
+  streakDay: number;
+  nextAmount: number;
   alreadyClaimed: boolean;
 }
 
@@ -24,7 +29,13 @@ export const claimDailyReward = createServerFn({ method: "POST" })
     const { data, error } = await supabase.rpc("claim_daily_reward");
     if (error) {
       if (error.message?.includes("already_claimed") || error.code === "P0001") {
-        return { amount: 0, newBalance: 0, alreadyClaimed: true };
+        return {
+          amount: 0,
+          newBalance: 0,
+          streakDay: 0,
+          nextAmount: 0,
+          alreadyClaimed: true,
+        };
       }
       throw new Error(error.message);
     }
@@ -32,6 +43,8 @@ export const claimDailyReward = createServerFn({ method: "POST" })
     return {
       amount: Number(row?.amount ?? 0),
       newBalance: Number(row?.new_balance ?? 0),
+      streakDay: Number(row?.streak_day ?? 0),
+      nextAmount: Number(row?.next_amount ?? 0),
       alreadyClaimed: false,
     };
   });
