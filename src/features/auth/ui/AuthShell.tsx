@@ -9,7 +9,7 @@ interface AuthShellProps {
   footer?: ReactNode
 }
 
-export default function AuthShell({ eyebrow, title, subtitle, children, footer }: AuthShellProps) {
+export function AuthShell({ eyebrow, title, subtitle, children, footer }: AuthShellProps) {
   return (
     <div className="relative isolate flex min-h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#0A0A0F] px-4 py-12">
       {/* 배경 레이어 */}
