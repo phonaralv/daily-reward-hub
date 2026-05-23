@@ -9,7 +9,14 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getLedger } from "@/lib/wallet.functions";
 
-export type LedgerKind = "daily_reward" | "quest_reward" | "adjustment" | "spend";
+export type LedgerKind =
+  | "daily_reward"
+  | "quest_reward"
+  | "referral_reward"
+  | "vip_bonus"
+  | "leaderboard_reward"
+  | "adjustment"
+  | "spend";
 
 export interface LedgerEntryDTO {
   id: string;
