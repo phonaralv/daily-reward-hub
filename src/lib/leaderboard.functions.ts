@@ -1,6 +1,12 @@
 /**
  * Leaderboard server functions — read current period + entries.
  *
+ * SECURITY: The `leaderboard_entries` table only exposes the caller's own
+ * row via RLS. The public listing comes from the SECURITY DEFINER RPC
+ * `get_leaderboard_entries(period_id)` which returns display_name + rank +
+ * score + reward + is_self, but NEVER `user_id`. This prevents enumerating
+ * participants' UUIDs to cross-join with `profiles`.
+ *
  * Settlement happens via the `settle_leaderboard(period_id)` RPC, called
  * from `/api/public/cron/settle-leaderboard`. Client never settles.
  */
@@ -33,24 +39,11 @@ export const getCurrentLeaderboard = createServerFn({ method: "GET" })
       };
     }
 
-    const { data: entries, error: eErr } = await supabase
-      .from("leaderboard_entries")
-      .select("user_id, score, rank, reward_amount")
-      .eq("period_id", period.id)
-      .order("score", { ascending: false })
-      .limit(50);
-    if (eErr) throw new Error(eErr.message);
-
-    const userIds = (entries ?? []).map((e) => e.user_id);
-    const { data: profiles } = userIds.length
-      ? await supabase
-          .from("profiles")
-          .select("id, display_name")
-          .in("id", userIds)
-      : { data: [] as Array<{ id: string; display_name: string | null }> };
-    const nameById = new Map(
-      (profiles ?? []).map((p) => [p.id, p.display_name] as const),
+    const { data: rows, error: eErr } = await supabase.rpc(
+      "get_leaderboard_entries",
+      { p_period_id: period.id },
     );
+    if (eErr) throw new Error(eErr.message);
 
     return {
       periodId: period.id,
@@ -58,12 +51,12 @@ export const getCurrentLeaderboard = createServerFn({ method: "GET" })
       startsAt: period.starts_at,
       endsAt: period.ends_at,
       settledAt: period.settled_at,
-      entries: (entries ?? []).map((e, i) => ({
-        userId: e.user_id,
-        displayName: nameById.get(e.user_id) ?? null,
-        score: Number(e.score ?? 0),
-        rank: e.rank ?? i + 1,
-        rewardAmount: Number(e.reward_amount ?? 0),
+      entries: (rows ?? []).map((r, i) => ({
+        userId: r.is_self ? (context.userId as string) : "",
+        displayName: r.display_name ?? null,
+        score: Number(r.score ?? 0),
+        rank: r.rank ?? i + 1,
+        rewardAmount: Number(r.reward_amount ?? 0),
       })),
     };
   });
