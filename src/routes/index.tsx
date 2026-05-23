@@ -9,6 +9,7 @@ import { WorldActivityMapPlaceholder } from "@/shared/ui/presence/WorldActivityM
 import { LiveTicker } from "@/shared/ui/presence/primitives/LiveTicker";
 import { StreakCard } from "@/components/presence/StreakCard";
 import { useStreak } from "@/hooks/useStreak";
+import { DailyMissions } from "@/components/mission/DailyMissions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +32,7 @@ function Home() {
           <RegionHeatBadge />
         </section>
 
-        {/* Presence Streak - 가장 중요한 개인 활동 지표 */}
+        {/* Presence Streak */}
         <section>
           {isLoading ? (
             <div className="h-[178px] rounded-2xl border border-zinc-800 bg-zinc-900 animate-pulse" />
@@ -42,6 +43,11 @@ function Home() {
               todayMinutes={streak?.todayMinutes ?? 0}
             />
           )}
+        </section>
+
+        {/* Daily Missions */}
+        <section className="px-1">
+          <DailyMissions />
         </section>
 
         <section className="space-y-2">
