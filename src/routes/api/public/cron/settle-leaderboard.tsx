@@ -13,7 +13,7 @@
  * a valid signature header the route 401s and writes nothing.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const Route = createFileRoute("/api/public/cron/settle-leaderboard")({
@@ -21,21 +21,18 @@ export const Route = createFileRoute("/api/public/cron/settle-leaderboard")({
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env.CRON_SECRET;
-        if (!secret) {
-          return new Response("Server misconfigured", { status: 500 });
-        }
-        const sigHeader = request.headers.get("x-signature") ?? "";
-        const body = await request.text();
-        const expected = createHmac("sha256", secret).update(body).digest("hex");
+        if (!secret) return new Response("Server misconfigured", { status: 500 });
+
+        const provided = request.headers.get("x-cron-secret") ?? "";
         let ok = false;
         try {
-          const a = Buffer.from(sigHeader, "hex");
-          const b = Buffer.from(expected, "hex");
+          const a = Buffer.from(provided);
+          const b = Buffer.from(secret);
           ok = a.length === b.length && timingSafeEqual(a, b);
         } catch {
           ok = false;
         }
-        if (!ok) return new Response("Invalid signature", { status: 401 });
+        if (!ok) return new Response("Invalid secret", { status: 401 });
 
         const now = new Date().toISOString();
         const { data: periods, error: pErr } = await supabaseAdmin
@@ -61,8 +58,17 @@ export const Route = createFileRoute("/api/public/cron/settle-leaderboard")({
           settled.push(p.id);
         }
 
+        // Ensure next period exists.
+        const { data: nextId, error: nErr } = await supabaseAdmin.rpc(
+          "ensure_current_leaderboard_period",
+          { p_kind: "weekly" },
+        );
+        if (nErr) {
+          return new Response(`ensure_period: ${nErr.message}`, { status: 500 });
+        }
+
         return new Response(
-          JSON.stringify({ settled, payouts: totalPaid }),
+          JSON.stringify({ settled, payouts: totalPaid, current_period: nextId }),
           { status: 200, headers: { "content-type": "application/json" } },
         );
       },

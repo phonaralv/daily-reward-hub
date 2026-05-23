@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useAuth } from '@/features/auth/useAuth'
+import { sendMagicLink } from '@/features/auth/auth'
 import AuthShell from '@/features/auth/ui/AuthShell'
 import NeonInput from '@/features/auth/ui/NeonInput'
 import NeonButton from '@/features/auth/ui/NeonButton'
@@ -10,7 +10,6 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
-  const { sendMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
