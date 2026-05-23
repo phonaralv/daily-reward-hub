@@ -5,6 +5,9 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
+// PHONARA Custom Architecture Guard Rules
+import phonaraRules from "./eslint/config/custom-rules.js";
+
 export default tseslint.config(
   { ignores: ["dist", ".output", ".vinxi", "scripts/**"] },
   {
@@ -17,6 +20,7 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      phonara: phonaraRules, // PHONARA Custom Rules
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -83,6 +87,10 @@ export default tseslint.config(
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+
+      // PHONARA Custom Architecture Guards
+      "phonara/no-direct-ledger-write": "error",
+      "phonara/no-client-reward-calculation": "warn", // Start with warn, promote to error later
     },
   },
   // Exceptions for files allowed to use the raw imports.
