@@ -15,6 +15,7 @@ import { Route as SlotsRouteImport } from './routes/slots'
 import { Route as ReferRouteImport } from './routes/refer'
 import { Route as PlayFreeRouteImport } from './routes/play-free'
 import { Route as MissionsRouteImport } from './routes/missions'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -48,6 +49,11 @@ const MissionsRoute = MissionsRouteImport.update({
   path: '/missions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -62,6 +68,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   MissionsRoute: typeof MissionsRoute
   PlayFreeRoute: typeof PlayFreeRoute
   ReferRoute: typeof ReferRoute
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MissionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account': {
       id: '/account'
       path: '/account'
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  LeaderboardRoute: LeaderboardRoute,
   MissionsRoute: MissionsRoute,
   PlayFreeRoute: PlayFreeRoute,
   ReferRoute: ReferRoute,
