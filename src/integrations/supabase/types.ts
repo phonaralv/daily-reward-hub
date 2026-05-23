@@ -450,6 +450,16 @@ export type Database = {
         Args: { p_referee: string; p_referrer: string }
         Returns: string
       }
+      get_leaderboard_entries: {
+        Args: { p_period_id: string }
+        Returns: {
+          display_name: string
+          is_self: boolean
+          rank: number
+          reward_amount: number
+          score: number
+        }[]
+      }
       progress_quest: {
         Args: { p_code: string; p_delta: number }
         Returns: {
