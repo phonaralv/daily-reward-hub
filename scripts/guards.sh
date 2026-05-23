@@ -101,6 +101,25 @@ check "presence sources are React-free (purity contract)" \
      -E \"(from ['\\\"]react['\\\"]|\\buse(State|Effect|Memo|Callback|Ref|LayoutEffect|SyncExternalStore)\\b|\\bsubscribeTick\\b)\" \
      src/shared/lib/presence/sources"
 
+# 10. ledger_entries is append-only single entry point.
+#     No direct INSERT/UPDATE/DELETE/UPSERT from app code.
+check "no direct writes to ledger_entries (RPC only)" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E \"\\.from\\(\\s*['\\\"]ledger_entries['\\\"]\\s*\\)\\s*\\.\\s*(insert|update|delete|upsert)\\b\" src"
+
+# 11. Realtime channel per route — wallet/ledger realtime mounts only at __root.
+check "useLedgerStream + ledger channel not used in routes" \
+  "grep -RIn --include='*.tsx' --include='*.ts' \
+     -E '(useLedgerStream\\(|\\.channel\\(.*ledger)' src/routes \
+   | grep -v '__root.tsx'"
+
+# 12. wallets is trigger-managed — never written directly.
+check "no direct writes to wallets table" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E \"\\.from\\(\\s*['\\\"]wallets['\\\"]\\s*\\)\\s*\\.\\s*(insert|update|delete|upsert)\\b\" src"
+
 
 echo ""
 if [ "$fail" -eq 0 ]; then
