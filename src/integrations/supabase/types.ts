@@ -411,6 +411,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _apply_reward: {
+        Args: {
+          p_base: number
+          p_kind: Database["public"]["Enums"]["ledger_kind"]
+          p_ref_id: string
+          p_ref_kind: string
+          p_user: string
+        }
+        Returns: number
+      }
       claim_daily_reward: {
         Args: never
         Returns: {
@@ -427,6 +437,19 @@ export type Database = {
           new_balance: number
         }[]
       }
+      claim_referral_reward: {
+        Args: { p_referee: string }
+        Returns: {
+          amount: number
+          new_balance: number
+          status: string
+        }[]
+      }
+      create_referral_code: { Args: never; Returns: string }
+      evaluate_referral_fraud: {
+        Args: { p_referee: string; p_referrer: string }
+        Returns: string
+      }
       progress_quest: {
         Args: { p_code: string; p_delta: number }
         Returns: {
@@ -435,7 +458,18 @@ export type Database = {
           target: number
         }[]
       }
+      record_fingerprint: { Args: { p_visitor_id: string }; Returns: undefined }
+      redeem_referral_code: {
+        Args: { p_code: string }
+        Returns: {
+          referrer_id: string
+          status: string
+        }[]
+      }
+      settle_leaderboard: { Args: { p_period_id: string }; Returns: number }
       streak_reward_amount: { Args: { p_day: number }; Returns: number }
+      vip_multiplier: { Args: { p_user_id: string }; Returns: number }
+      vip_tier: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
       ledger_kind:
