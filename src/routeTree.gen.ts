@@ -12,12 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as SlotsRouteImport } from './routes/slots'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRequestRouteImport } from './routes/reset-password-request'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReferRouteImport } from './routes/refer'
 import { Route as PlayFreeRouteImport } from './routes/play-free'
 import { Route as MissionsRouteImport } from './routes/missions'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiPublicCronSettleLeaderboardRouteImport } from './routes/api/public/cron/settle-leaderboard'
 
 const WalletRoute = WalletRouteImport.update({
@@ -35,6 +40,21 @@ const SlotsRoute = SlotsRouteImport.update({
   path: '/slots',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRequestRoute = ResetPasswordRequestRouteImport.update({
+  id: '/reset-password-request',
+  path: '/reset-password-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReferRoute = ReferRouteImport.update({
   id: '/refer',
   path: '/refer',
@@ -48,6 +68,11 @@ const PlayFreeRoute = PlayFreeRouteImport.update({
 const MissionsRoute = MissionsRouteImport.update({
   id: '/missions',
   path: '/missions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -65,6 +90,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronSettleLeaderboardRoute =
   ApiPublicCronSettleLeaderboardRouteImport.update({
     id: '/api/public/cron/settle-leaderboard',
@@ -76,24 +106,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/reset-password-request': typeof ResetPasswordRequestRoute
+  '/signup': typeof SignupRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/reset-password-request': typeof ResetPasswordRequestRoute
+  '/signup': typeof SignupRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesById {
@@ -101,12 +141,17 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/reset-password-request': typeof ResetPasswordRequestRoute
+  '/signup': typeof SignupRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRouteTypes {
@@ -115,36 +160,51 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/leaderboard'
+    | '/login'
     | '/missions'
     | '/play-free'
     | '/refer'
+    | '/reset-password'
+    | '/reset-password-request'
+    | '/signup'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/auth/callback'
     | '/api/public/cron/settle-leaderboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
     | '/leaderboard'
+    | '/login'
     | '/missions'
     | '/play-free'
     | '/refer'
+    | '/reset-password'
+    | '/reset-password-request'
+    | '/signup'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/auth/callback'
     | '/api/public/cron/settle-leaderboard'
   id:
     | '__root__'
     | '/'
     | '/account'
     | '/leaderboard'
+    | '/login'
     | '/missions'
     | '/play-free'
     | '/refer'
+    | '/reset-password'
+    | '/reset-password-request'
+    | '/signup'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/auth/callback'
     | '/api/public/cron/settle-leaderboard'
   fileRoutesById: FileRoutesById
 }
@@ -152,12 +212,17 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   LeaderboardRoute: typeof LeaderboardRoute
+  LoginRoute: typeof LoginRoute
   MissionsRoute: typeof MissionsRoute
   PlayFreeRoute: typeof PlayFreeRoute
   ReferRoute: typeof ReferRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  ResetPasswordRequestRoute: typeof ResetPasswordRequestRoute
+  SignupRoute: typeof SignupRoute
   SlotsRoute: typeof SlotsRoute
   TradeRoute: typeof TradeRoute
   WalletRoute: typeof WalletRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   ApiPublicCronSettleLeaderboardRoute: typeof ApiPublicCronSettleLeaderboardRoute
 }
 
@@ -184,6 +249,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlotsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password-request': {
+      id: '/reset-password-request'
+      path: '/reset-password-request'
+      fullPath: '/reset-password-request'
+      preLoaderRoute: typeof ResetPasswordRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/refer': {
       id: '/refer'
       path: '/refer'
@@ -203,6 +289,13 @@ declare module '@tanstack/react-router' {
       path: '/missions'
       fullPath: '/missions'
       preLoaderRoute: typeof MissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -226,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/settle-leaderboard': {
       id: '/api/public/cron/settle-leaderboard'
       path: '/api/public/cron/settle-leaderboard'
@@ -240,12 +340,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   LeaderboardRoute: LeaderboardRoute,
+  LoginRoute: LoginRoute,
   MissionsRoute: MissionsRoute,
   PlayFreeRoute: PlayFreeRoute,
   ReferRoute: ReferRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  ResetPasswordRequestRoute: ResetPasswordRequestRoute,
+  SignupRoute: SignupRoute,
   SlotsRoute: SlotsRoute,
   TradeRoute: TradeRoute,
   WalletRoute: WalletRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   ApiPublicCronSettleLeaderboardRoute: ApiPublicCronSettleLeaderboardRoute,
 }
 export const routeTree = rootRouteImport

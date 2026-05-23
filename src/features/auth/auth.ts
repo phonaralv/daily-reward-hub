@@ -109,3 +109,46 @@ export async function sendMagicLink(email: string): Promise<{ error: AuthError |
 
   return { error: null };
 }
+
+/* ============================================================
+ * Step A 추가 — 비파괴 확장 (기존 export 시그니처 무변경).
+ * Email+Password 회원가입 / 비밀번호 재설정 요청 / 비밀번호 갱신.
+ * ============================================================ */
+
+export async function signUpWithPassword(
+  credentials: SignUpCredentials,
+): Promise<{ user: AuthUser | null; error: AuthError | null }> {
+  const { data, error } = await supabase.auth.signUp({
+    email: credentials.email,
+    password: credentials.password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return { user: null, error: { code: "unknown", message: error.message } };
+  }
+  return {
+    user: data.user ? mapSupabaseUser(data.user) : null,
+    error: null,
+  };
+}
+
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ error: AuthError | null }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  if (error) return { error: { code: "unknown", message: error.message } };
+  return { error: null };
+}
+
+export async function updatePassword(
+  newPassword: string,
+): Promise<{ error: AuthError | null }> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: { code: "unknown", message: error.message } };
+  return { error: null };
+}
