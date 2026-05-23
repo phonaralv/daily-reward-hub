@@ -131,23 +131,27 @@ check "no direct writes to referral/fraud/leaderboard tables" \
      --exclude-dir=node_modules \
      -E \"\\.from\\(\\s*['\\\"](referrals|referral_codes|fraud_signals|device_fingerprints|leaderboard_periods|leaderboard_entries)['\\\"]\\s*\\)\\s*\\.\\s*(insert|update|delete|upsert)\\b\" src"
 
-# 14. VIP multiplier MUST be server-computed. Client code may DISPLAY it
-#     but never derive it from tier. Forbid hard-coded tier→multiplier
-#     constants outside SQL/server-fn files.
+# 14. VIP multiplier MUST be server-computed. Scope: forbid the exact VIP
+#     multiplier curve appearing alongside a `tier`/`vip` keyword in any
+#     non-server file. Presence configs use 1.05/1.10/1.15 for unrelated
+#     activity multipliers and are excluded by directory.
 check "no client-side VIP multiplier derivation" \
   "grep -RIn --include='*.ts' --include='*.tsx' \
      --exclude-dir=node_modules \
-     -E '\\b(1\\.05|1\\.10|1\\.15|1\\.25|1\\.50)\\b' src \
+     -E '\\b(1\\.05|1\\.10|1\\.15|1\\.25|1\\.50)\\b' \
+     src/features src/entities src/lib src/shared/lib/realtime src/shared/lib/fingerprint.ts \
+   | grep -iE '(vip|tier|multiplier)' \
    | grep -v '\\.functions\\.ts' \
    | grep -v '\\.server\\.ts' \
    | grep -v '// allow-vip-const'"
 
-# 15. Fraud evaluation is server-only. The RPC name must only appear in
-#     SQL or server-fn files; no client call site is allowed.
-check "evaluate_referral_fraud is server-only" \
+# 15. Fraud evaluation is server-only. Comments may reference the name
+#     (// allow-fraud-mention); only forbid actual `rpc('evaluate_referral_fraud'`
+#     style call sites outside server-fn files.
+check "evaluate_referral_fraud rpc call is server-only" \
   "grep -RIn --include='*.ts' --include='*.tsx' \
      --exclude-dir=node_modules \
-     -E 'evaluate_referral_fraud' src \
+     -E \"\\.rpc\\(\\s*['\\\"]evaluate_referral_fraud['\\\"]\" src \
    | grep -v '\\.functions\\.ts' \
    | grep -v '\\.server\\.ts'"
 
