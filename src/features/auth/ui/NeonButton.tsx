@@ -3,16 +3,18 @@ import { cn } from '@/lib/utils'
 
 type ButtonState = 'idle' | 'loading' | 'success' | 'error'
 
-interface NeonButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface NeonButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   state?: ButtonState
   variant?: 'primary' | 'secondary'
+  loading?: boolean
 }
 
 const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
-  ({ state = 'idle', variant = 'primary', className, children, disabled, ...props }, ref) => {
-    const isLoading = state === 'loading'
-    const isSuccess = state === 'success'
-    const isError = state === 'error'
+  ({ state, loading, variant = 'primary', className, children, disabled, ...props }, ref) => {
+    const effectiveState: ButtonState = state ?? (loading ? 'loading' : 'idle')
+    const isLoading = effectiveState === 'loading'
+    const isSuccess = effectiveState === 'success'
+    const isError = effectiveState === 'error'
 
     return (
       <button
