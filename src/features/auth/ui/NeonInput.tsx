@@ -32,3 +32,5 @@ const NeonInput = forwardRef<HTMLInputElement, NeonInputProps>(
 
 NeonInput.displayName = 'NeonInput'
 export default NeonInput
+
+export { NeonInput };

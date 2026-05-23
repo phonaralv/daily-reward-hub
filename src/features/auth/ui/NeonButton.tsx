@@ -47,3 +47,5 @@ const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
 
 NeonButton.displayName = 'NeonButton'
 export default NeonButton
+
+export { NeonButton };

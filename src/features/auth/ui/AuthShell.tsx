@@ -50,3 +50,5 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
     </div>
   )
 }
+
+export { AuthShell };
