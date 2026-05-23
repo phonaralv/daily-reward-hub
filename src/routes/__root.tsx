@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { registerPwa } from "@/shared/lib/pwa/register";
 import { useLedgerStream } from "@/shared/lib/realtime/useLedgerStream";
 import { useFingerprint } from "@/shared/lib/fingerprint";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
