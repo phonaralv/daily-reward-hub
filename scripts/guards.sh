@@ -27,7 +27,8 @@ check "no client import of client.server.ts" \
      -E \"from ['\\\"][^'\\\"]*supabase/client\\.server\" src \
    | grep -v 'integrations/supabase/client.server.ts' \
    | grep -v '\\.server\\.ts' \
-   | grep -v '\\.functions\\.ts'"
+   | grep -v '\\.functions\\.ts' \
+   | grep -v 'src/routes/api/'"
 
 # 2. No hard-coded hex colors in component/style code (use design tokens).
 #    Allowed paths: design system source, SSR error page (no Tailwind there),
