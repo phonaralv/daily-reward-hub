@@ -1,4 +1,5 @@
 import { PresenceState } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 export class PresenceSource {
   private state: PresenceState = {
@@ -10,6 +11,8 @@ export class PresenceSource {
   private listeners = new Set<(state: PresenceState) => void>();
   private heartbeatInterval: number | null = null;
   private isStarted = false;
+  private lastHeartbeatSent = 0;
+  private readonly HEARTBEAT_INTERVAL = 30000; // 30초
 
   constructor() {
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
@@ -73,6 +76,27 @@ export class PresenceSource {
     }
 
     this.notifyListeners();
+    this.sendHeartbeat(isPresent);
+  }
+
+  private async sendHeartbeat(isPresent: boolean) {
+    const now = Date.now();
+
+    if (now - this.lastHeartbeatSent < this.HEARTBEAT_INTERVAL) {
+      return;
+    }
+    this.lastHeartbeatSent = now;
+
+    try {
+      await supabase.functions.invoke('presence-heartbeat', {
+        body: {
+          is_present: isPresent,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('Presence heartbeat failed:', error);
+    }
   }
 
   private notifyListeners() {
