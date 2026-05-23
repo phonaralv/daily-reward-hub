@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { supabase } from "@/integrations/supabase/client";
 import { registerPwa } from "@/shared/lib/pwa/register";
 import { useLedgerStream } from "@/shared/lib/realtime/useLedgerStream";
+import { useFingerprint } from "@/shared/lib/fingerprint";
 
 function NotFoundComponent() {
   return (
@@ -116,6 +117,7 @@ function AuthInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
   useLedgerStream();
+  useFingerprint();
   useEffect(() => {
     registerPwa();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {

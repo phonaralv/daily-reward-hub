@@ -15,8 +15,10 @@ import { Route as SlotsRouteImport } from './routes/slots'
 import { Route as ReferRouteImport } from './routes/refer'
 import { Route as PlayFreeRouteImport } from './routes/play-free'
 import { Route as MissionsRouteImport } from './routes/missions'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicCronSettleLeaderboardRouteImport } from './routes/api/public/cron/settle-leaderboard'
 
 const WalletRoute = WalletRouteImport.update({
   id: '/wallet',
@@ -48,6 +50,11 @@ const MissionsRoute = MissionsRouteImport.update({
   path: '/missions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -58,80 +65,100 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSettleLeaderboardRoute =
+  ApiPublicCronSettleLeaderboardRouteImport.update({
+    id: '/api/public/cron/settle-leaderboard',
+    path: '/api/public/cron/settle-leaderboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/missions': typeof MissionsRoute
   '/play-free': typeof PlayFreeRoute
   '/refer': typeof ReferRoute
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   id:
     | '__root__'
     | '/'
     | '/account'
+    | '/leaderboard'
     | '/missions'
     | '/play-free'
     | '/refer'
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   MissionsRoute: typeof MissionsRoute
   PlayFreeRoute: typeof PlayFreeRoute
   ReferRoute: typeof ReferRoute
   SlotsRoute: typeof SlotsRoute
   TradeRoute: typeof TradeRoute
   WalletRoute: typeof WalletRoute
+  ApiPublicCronSettleLeaderboardRoute: typeof ApiPublicCronSettleLeaderboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -178,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MissionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account': {
       id: '/account'
       path: '/account'
@@ -192,18 +226,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/settle-leaderboard': {
+      id: '/api/public/cron/settle-leaderboard'
+      path: '/api/public/cron/settle-leaderboard'
+      fullPath: '/api/public/cron/settle-leaderboard'
+      preLoaderRoute: typeof ApiPublicCronSettleLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  LeaderboardRoute: LeaderboardRoute,
   MissionsRoute: MissionsRoute,
   PlayFreeRoute: PlayFreeRoute,
   ReferRoute: ReferRoute,
   SlotsRoute: SlotsRoute,
   TradeRoute: TradeRoute,
   WalletRoute: WalletRoute,
+  ApiPublicCronSettleLeaderboardRoute: ApiPublicCronSettleLeaderboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

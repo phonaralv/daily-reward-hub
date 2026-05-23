@@ -11,6 +11,9 @@ import { PhonAmount } from "@/shared/ui/PhonAmount";
 const KIND_LABEL: Record<LedgerKind, string> = {
   daily_reward: "데일리 보상",
   quest_reward: "퀘스트 보상",
+  referral_reward: "추천 보상",
+  vip_bonus: "VIP 보너스",
+  leaderboard_reward: "리더보드 보상",
   adjustment: "조정",
   spend: "사용",
 };
