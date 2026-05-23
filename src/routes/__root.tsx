@@ -117,6 +117,7 @@ function AuthInvalidator() {
   const router = useRouter();
   const qc = useQueryClient();
   useLedgerStream();
+  useFingerprint();
   useEffect(() => {
     registerPwa();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
