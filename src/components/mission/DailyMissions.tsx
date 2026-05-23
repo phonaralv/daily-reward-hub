@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Mission {
@@ -12,21 +12,39 @@ interface Mission {
 export function DailyMissions() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [claimingCode, setClaimingCode] = useState<string | null>(null);
+
+  const fetchMissions = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_daily_missions');
+
+    if (error) {
+      console.error('미션 불러오기 실패:', error);
+    } else {
+      setMissions(data || []);
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    const fetchMissions = async () => {
-      const { data, error } = await supabase.rpc('get_daily_missions');
-
-      if (error) {
-        console.error('미션 불러오기 실패:', error);
-      } else {
-        setMissions(data || []);
-      }
-      setLoading(false);
-    };
-
     fetchMissions();
-  }, []);
+  }, [fetchMissions]);
+
+  const claimMission = async (code: string) => {
+    setClaimingCode(code);
+
+    const { data, error } = await supabase.rpc('claim_mission', {
+      p_mission_code: code,
+    });
+
+    if (error) {
+      alert('수령 실패: ' + error.message);
+      console.error(error);
+    } else {
+      await fetchMissions();
+    }
+
+    setClaimingCode(null);
+  };
 
   if (loading) {
     return (
@@ -67,10 +85,11 @@ export function DailyMissions() {
               </div>
             ) : (
               <button
-                className="rounded-full bg-white px-4 py-1 text-xs font-medium text-black active:scale-[0.985]"
-                onClick={() => alert('수령 기능은 다음에 연결할게!')}
+                disabled={claimingCode === mission.code}
+                onClick={() => claimMission(mission.code)}
+                className="rounded-full bg-white px-4 py-1 text-xs font-medium text-black disabled:opacity-60 active:scale-[0.985]"
               >
-                수령하기
+                {claimingCode === mission.code ? '수령 중...' : '수령하기'}
               </button>
             )}
           </div>
