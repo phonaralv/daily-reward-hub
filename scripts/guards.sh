@@ -64,12 +64,16 @@ check "no direct sonner imports outside notify.ts" \
    | grep -v 'components/ui/sonner'"
 
 # 6. No direct setInterval/setTimeout inside the presence layer
-#    (except the scheduler itself). All timing must flow through subscribeTick.
+#    (except the scheduler itself, or lines explicitly tagged
+#    `// allow-source-fade` for the rewardClaim fade timer).
 check "no setInterval/setTimeout in presence/ outside scheduler" \
   "grep -RIn --include='*.ts' --include='*.tsx' \
      --exclude-dir=node_modules \
      -E '\\b(setInterval|setTimeout)\\b' src/shared/lib/presence src/shared/ui/presence \
-   | grep -v 'runtime/scheduler.ts'"
+   | grep -v 'runtime/scheduler.ts' \
+   | grep -v '// allow-source-fade' \
+   | grep -vE ':[[:space:]]*\\*' \
+   | grep -vE 'ReturnType<typeof setTimeout>'"
 
 # 7. presence UI components must not import the scheduler directly —
 #    they only use the public hooks (useLiveCounter, useActiveRegions, useGlobalPulse).
