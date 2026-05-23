@@ -87,3 +87,25 @@ export async function getCurrentSession(): Promise<AuthSession | null> {
     expiresAt: data.session.expires_at,
   };
 }
+
+/**
+ * Magic Link 발송
+ * 사용자에게 로그인용 링크를 이메일로 발송합니다.
+ * 비밀번호 없이 이메일만으로 로그인 가능합니다.
+ */
+export async function sendMagicLink(email: string): Promise<{ error: AuthError | null }> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return {
+      error: { code: "unknown", message: error.message },
+    };
+  }
+
+  return { error: null };
+}
