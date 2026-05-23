@@ -31,7 +31,9 @@ import { PRESENCE_SOURCE_KEYS } from "@/shared/lib/presence/sources";
 
 const MAX_TICK_AVG_MS = 1;
 const MAX_TICK_PEAK_MS = 4;
-const MAX_SOURCES_PER_ROUTE = 8;
+// Bumped 8 → 10 in Phase 2 to accommodate walletBalance + rewardClaim sources.
+// Phase 3 will revisit when leaderboardRank source lands.
+const MAX_SOURCES_PER_ROUTE = 10;
 
 afterEach(() => {
   __resetTelemetry();

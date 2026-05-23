@@ -31,8 +31,8 @@ function emit() {
 export function pushRewardClaim(claim: Omit<RewardClaim, "at"> & { at?: number }) {
   current = { ...claim, at: claim.at ?? Date.now() };
   emit();
-  if (fadeTimer) clearTimeout(fadeTimer);
-  fadeTimer = setTimeout(() => {
+  if (fadeTimer) clearTimeout(fadeTimer); // allow-source-fade
+  fadeTimer = setTimeout(() => { // allow-source-fade
     current = null;
     fadeTimer = null;
     emit();
