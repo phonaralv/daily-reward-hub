@@ -89,7 +89,7 @@ serve(async (req) => {
   }
 });
 
-// 스트릭 보상 지급 함수 (_계_apply_reward 사용)
+// 보상 지급 함수
 async function grantStreakReward(userId: string, streakDays: number) {
   const rewardMap: Record<number, number> = {
     3: 300,
@@ -105,7 +105,7 @@ async function grantStreakReward(userId: string, streakDays: number) {
   const refId = `presence_streak:${streakDays}:${new Date().toISOString().split("T")[0]}`;
 
   try {
-    await supabase.rpc("apply_reward", {
+    await supabase.rpc("_apply_reward", {
       p_user: userId,
       p_kind: "presence_streak_reward",
       p_base: amount,
