@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useAuth } from '@/features/auth/useAuth'
+import { sendMagicLink } from '@/features/auth/auth'
 import AuthShell from '@/features/auth/ui/AuthShell'
 import NeonInput from '@/features/auth/ui/NeonInput'
 import NeonButton from '@/features/auth/ui/NeonButton'
