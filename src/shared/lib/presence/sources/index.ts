@@ -42,6 +42,11 @@ export {
   type RewardClaim,
   type RewardClaimSource,
 } from "./rewardClaimSource";
+export {
+  leaderboardRankSource,
+  type LeaderboardRankSnapshot,
+  type LeaderboardRankSource,
+} from "./leaderboardRankSource";
 
 /**
  * Canonical telemetry / debug keys for every Presence source.
@@ -70,6 +75,7 @@ export const PRESENCE_SOURCE_KEYS = {
   worldActivity: "world:activity",
   walletBalance: "wallet-balance",
   rewardClaim: "reward-claim",
+  leaderboardRank: "leaderboard-rank",
 } as const;
 
 /**
