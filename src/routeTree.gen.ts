@@ -18,6 +18,7 @@ import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicCronSettleLeaderboardRouteImport } from './routes/api/public/cron/settle-leaderboard'
 
 const WalletRoute = WalletRouteImport.update({
   id: '/wallet',
@@ -64,6 +65,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSettleLeaderboardRoute =
+  ApiPublicCronSettleLeaderboardRouteImport.update({
+    id: '/api/public/cron/settle-leaderboard',
+    path: '/api/public/cron/settle-leaderboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +94,7 @@ export interface FileRoutesByTo {
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +107,7 @@ export interface FileRoutesById {
   '/slots': typeof SlotsRoute
   '/trade': typeof TradeRoute
   '/wallet': typeof WalletRoute
+  '/api/public/cron/settle-leaderboard': typeof ApiPublicCronSettleLeaderboardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +133,7 @@ export interface FileRouteTypes {
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   id:
     | '__root__'
     | '/'
@@ -133,6 +145,7 @@ export interface FileRouteTypes {
     | '/slots'
     | '/trade'
     | '/wallet'
+    | '/api/public/cron/settle-leaderboard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +158,7 @@ export interface RootRouteChildren {
   SlotsRoute: typeof SlotsRoute
   TradeRoute: typeof TradeRoute
   WalletRoute: typeof WalletRoute
+  ApiPublicCronSettleLeaderboardRoute: typeof ApiPublicCronSettleLeaderboardRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/settle-leaderboard': {
+      id: '/api/public/cron/settle-leaderboard'
+      path: '/api/public/cron/settle-leaderboard'
+      fullPath: '/api/public/cron/settle-leaderboard'
+      preLoaderRoute: typeof ApiPublicCronSettleLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,7 +246,18 @@ const rootRouteChildren: RootRouteChildren = {
   SlotsRoute: SlotsRoute,
   TradeRoute: TradeRoute,
   WalletRoute: WalletRoute,
+  ApiPublicCronSettleLeaderboardRoute: ApiPublicCronSettleLeaderboardRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
