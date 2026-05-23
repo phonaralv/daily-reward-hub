@@ -7,7 +7,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { WalletDTO, LedgerEntryDTO, LedgerKind } from "@/entities/wallet";
+import type { WalletDTO } from "@/entities/wallet";
+import type { LedgerEntryDTO, LedgerKind } from "@/entities/ledger";
 
 const LedgerInput = z.object({ limit: z.number().int().min(1).max(100).default(20) });
 

@@ -42,7 +42,7 @@ export function WalletHud() {
               key={e.id}
               className="flex items-center justify-between text-sm"
             >
-              <span className="text-foreground">{KIND_LABEL[e.kind]}</span>
+              <span className="text-foreground">{KIND_LABEL[e.kind as LedgerKind]}</span>
               <span
                 className={
                   e.amount >= 0 ? "font-semibold text-success" : "font-semibold text-danger"
