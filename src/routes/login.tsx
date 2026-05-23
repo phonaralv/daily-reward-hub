@@ -10,7 +10,6 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
-  const { sendMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
