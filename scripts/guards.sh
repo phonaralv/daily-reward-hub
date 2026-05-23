@@ -124,6 +124,32 @@ check "no direct writes to wallets table" \
      --exclude-dir=node_modules \
      -E \"\\.from\\(\\s*['\\\"]wallets['\\\"]\\s*\\)\\s*\\.\\s*(insert|update|delete|upsert)\\b\" src"
 
+# 13. Phase 3 — referral / fraud / leaderboard tables are RPC-only.
+check "no direct writes to referral/fraud/leaderboard tables" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E \"\\.from\\(\\s*['\\\"](referrals|referral_codes|fraud_signals|device_fingerprints|leaderboard_periods|leaderboard_entries)['\\\"]\\s*\\)\\s*\\.\\s*(insert|update|delete|upsert)\\b\" src"
+
+# 14. VIP multiplier MUST be server-computed. Client code may DISPLAY it
+#     but never derive it from tier. Forbid hard-coded tier→multiplier
+#     constants outside SQL/server-fn files.
+check "no client-side VIP multiplier derivation" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E '\\b(1\\.05|1\\.10|1\\.15|1\\.25|1\\.50)\\b' src \
+   | grep -v '\\.functions\\.ts' \
+   | grep -v '\\.server\\.ts' \
+   | grep -v '// allow-vip-const'"
+
+# 15. Fraud evaluation is server-only. The RPC name must only appear in
+#     SQL or server-fn files; no client call site is allowed.
+check "evaluate_referral_fraud is server-only" \
+  "grep -RIn --include='*.ts' --include='*.tsx' \
+     --exclude-dir=node_modules \
+     -E 'evaluate_referral_fraud' src \
+   | grep -v '\\.functions\\.ts' \
+   | grep -v '\\.server\\.ts'"
+
 
 echo ""
 if [ "$fail" -eq 0 ]; then
